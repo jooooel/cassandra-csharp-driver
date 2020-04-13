@@ -30,7 +30,10 @@ build_script:
   - appveyor DownloadFile https://dist.apache.org/repos/dist/dev/cassandra/4.0-alpha4/apache-cassandra-4.0-alpha4-bin.tar.gz
   - tar xzf apache-cassandra-4.0-alpha4-bin.tar.gz -C %USERPROFILE%\.ccm\repository\4.0-alpha4 --strip-components=1
   - ps: |
-      "4.0.alpha4" | Out-File -FilePath $env:USERPROFILE\.ccm\repository\4.0-alpha4\0.version.txt
+      $MyPath = "$env:USERPROFILE\.ccm\repository\4.0-alpha4\0.version.txt"
+      $MyRawString = "4.0-alpha4"
+      $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
+      [System.IO.File]::WriteAllText($MyPath, $MyRawString, $Utf8NoBomEncoding)
   - ps: dotnet --info
   - ps: dotnet restore src
   - ps: dotnet build src\Cassandra.sln -c Release
