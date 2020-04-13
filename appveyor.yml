@@ -29,7 +29,8 @@ build_script:
   - ps: New-Item -ItemType Directory -Path "$env:USERPROFILE\.ccm\repository\4.0-alpha4"
   - appveyor DownloadFile https://dist.apache.org/repos/dist/dev/cassandra/4.0-alpha4/apache-cassandra-4.0-alpha4-bin.tar.gz
   - tar xzf apache-cassandra-4.0-alpha4-bin.tar.gz -C %USERPROFILE%\.ccm\repository\4.0-alpha4 --strip-components=1
-  - ps: "4.0-alpha4" | Out-File %USERPROFILE%\.ccm\repository\4.0-alpha4\0.version.txt
+  - ps: |
+      "4.0-alpha4" | Out-File %USERPROFILE%\.ccm\repository\4.0-alpha4\0.version.txt
   - ps: dotnet --info
   - ps: dotnet restore src
   - ps: dotnet build src\Cassandra.sln -c Release
