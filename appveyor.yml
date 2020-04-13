@@ -32,7 +32,7 @@ build_script:
 
 test_script:
   - appveyor DownloadFile https://dist.apache.org/repos/dist/dev/cassandra/4.0-alpha4/apache-cassandra-4.0-alpha4-bin.tar.gz
-  - tar xzf apache-cassandra-4.0-alpha4-bin.tar.gz.tar.gz -C %USERPROFILE%/.ccm/repository/4.0-alpha4 --strip-components=1
+  - tar xzf apache-cassandra-4.0-alpha4-bin.tar.gz -C %USERPROFILE%/.ccm/repository/4.0-alpha4 --strip-components=1
   - ps: |
       if(${env:CI_TYPE} -eq "INTEGRATION_FULL")
       {
