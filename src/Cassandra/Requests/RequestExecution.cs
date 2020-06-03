@@ -241,13 +241,13 @@ namespace Cassandra.Requests
                 result,
                 () =>
                 {
-                    var schemaAgreed = _session.Cluster.Metadata.WaitForSchemaAgreement(_connection);
+                    var schemaAgreed = _session.Metadata.WaitForSchemaAgreement(_connection);
                     result.Info.SetSchemaInAgreement(schemaAgreed);
                     try
                     {
                         TaskHelper.WaitToComplete(
-                            _session.InternalCluster.GetControlConnection().HandleSchemaChangeEvent(schemaChange.SchemaChangeEventArgs, true),
-                            _session.Cluster.Configuration.ProtocolOptions.MaxSchemaAgreementWaitSeconds * 1000);
+                            _session.GetControlConnection().HandleSchemaChangeEvent(schemaChange.SchemaChangeEventArgs, true),
+                            _session.Configuration.ProtocolOptions.MaxSchemaAgreementWaitSeconds * 1000);
                     }
                     catch (TimeoutException)
                     {
@@ -322,7 +322,7 @@ namespace Cassandra.Requests
 
                     var request = (IQueryRequest)_parent.BuildRequest();
                     request.PagingState = pagingState;
-                    return _session.Cluster.Configuration.RequestHandlerFactory.Create(session, _parent.Serializer, request, statement, _parent.RequestOptions).SendAsync();
+                    return _session.Configuration.RequestHandlerFactory.Create(session, _parent.Serializer, request, statement, _parent.RequestOptions).SendAsync();
                 }, _parent.RequestOptions.QueryAbortTimeout, _session.MetricsManager);
             }
         }
@@ -370,7 +370,7 @@ namespace Cassandra.Requests
             }
 
             var retryInformation = GetRetryDecisionWithReason(
-                error, _parent.RetryPolicy, _parent.Statement, _session.Cluster.Configuration, _retryCount);
+                error, _parent.RetryPolicy, _parent.Statement, _session.Configuration, _retryCount);
 
             switch (retryInformation.Decision.DecisionType)
             {

@@ -37,18 +37,13 @@ namespace Cassandra
     /// at a time, so one instance per keyspace is necessary.
     /// </para>
     /// </summary>
-    public interface ISession: IDisposable
+    public interface ISession : IDisposable
     {
         /// <summary>
         /// Gets the Cassandra native binary protocol version
         /// </summary>
         int BinaryProtocolVersion { get; }
-
-        /// <summary>
-        /// Gets the cluster information and state
-        /// </summary>
-        ICluster Cluster { get; }
-
+        
         /// <summary>
         /// Determines if the object has been disposed.
         /// </summary>
@@ -319,9 +314,69 @@ namespace Cassandra
         /// </summary>
         Task ShutdownAsync();
 
-        [Obsolete("Method deprecated. The driver internally waits for schema agreement when there is an schema change. See ProtocolOptions.MaxSchemaAgreementWaitSeconds for more info.")]
-        void WaitForSchemaAgreement(RowSet rs);
-        [Obsolete("Method deprecated. The driver internally waits for schema agreement when there is an schema change. See ProtocolOptions.MaxSchemaAgreementWaitSeconds for more info.")]
-        bool WaitForSchemaAgreement(IPEndPoint forHost);
+        /// <summary>
+        ///  Gets read-only metadata on the connected cluster. 
+        /// <para>This includes the
+        ///  know nodes (with their status as seen by the driver) as well as the schema
+        ///  definitions.
+        /// </para>
+        /// <para>This method may trigger the creation of a connection if none has been established yet.
+        /// </para>
+        /// </summary>
+        Metadata Metadata { get; }
+
+        /// <summary>
+        /// Cluster client configuration
+        /// </summary>
+        Configuration Configuration { get; }
+
+        /// <summary>
+        /// Event that gets triggered when a new host is added to the cluster
+        /// </summary>
+        event Action<Host> HostAdded;
+
+        /// <summary>
+        /// Event that gets triggered when a host has been removed from the cluster
+        /// </summary>
+        event Action<Host> HostRemoved;
+
+        /// <summary>
+        ///  Returns all known hosts of this cluster.
+        /// </summary>
+        ICollection<Host> AllHosts();
+
+        /// <summary>
+        /// Get the host instance for a given Ip address.
+        /// </summary>
+        /// <param name="address">Ip address of the host</param>
+        /// <returns>The host or null if not found</returns>
+        Host GetHost(IPEndPoint address);
+        
+        /// <summary>
+        /// Gets a collection of replicas for a given partitionKey. Backward-compatibility only, use GetReplicas(keyspace, partitionKey) instead.
+        /// </summary>
+        /// <param name="partitionKey">Byte array representing the partition key</param>
+        /// <returns></returns>
+        ICollection<Host> GetReplicas(byte[] partitionKey);
+
+        /// <summary>
+        /// Gets a collection of replicas for a given partitionKey on a given keyspace
+        /// </summary>
+        /// <param name="keyspace">Byte array representing the partition key</param>
+        /// <param name="partitionKey">Byte array representing the partition key</param>
+        /// <returns></returns>
+        ICollection<Host> GetReplicas(string keyspace, byte[] partitionKey);
+
+        /// <summary>
+        /// Updates keyspace metadata (including token metadata for token aware routing) for a given keyspace or a specific keyspace table.
+        /// If no keyspace is provided then this method will update the metadata and token map for all the keyspaces of the cluster.
+        /// </summary>
+        Task<bool> RefreshSchemaAsync(string keyspace = null, string table = null);
+
+        /// <summary>
+        /// Updates keyspace metadata (including token metadata for token aware routing) for a given keyspace or a specific keyspace table.
+        /// If no keyspace is provided then this method will update the metadata and token map for all the keyspaces of the cluster.
+        /// </summary>
+        bool RefreshSchema(string keyspace = null, string table = null);
     }
 }

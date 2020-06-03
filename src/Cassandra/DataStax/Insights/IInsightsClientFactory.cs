@@ -20,6 +20,6 @@ namespace Cassandra.DataStax.Insights
 {
     internal interface IInsightsClientFactory
     {
-        IInsightsClient Create(IInternalCluster cluster, IInternalSession session);
+        IInsightsClient Create(IInternalSession session);
     }
 }

@@ -63,7 +63,7 @@ namespace Cassandra
         /// <summary>
         /// Adds a <see cref="ILoggerProvider" /> to the logger factory used by the driver.
         /// <para>
-        /// Be sure to call this method before initializing the <see cref="ICluster"/> to ensure that
+        /// Be sure to call this method before initializing the <see cref="ISession"/> to ensure that
         /// <see cref="ILoggerFactory"/> API is used as driver logging mechanism instead of
         /// <see cref="Trace"/>.
         /// </para>

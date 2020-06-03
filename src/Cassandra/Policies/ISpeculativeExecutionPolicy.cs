@@ -26,9 +26,9 @@ namespace Cassandra
     public interface ISpeculativeExecutionPolicy : IDisposable
     {
         /// <summary>
-        /// Initializes the policy at cluster startup.
+        /// Initializes the policy at session startup.
         /// </summary>
-        void Initialize(ICluster cluster);
+        void Initialize(ISession session);
 
         /// <summary>
         /// Returns the plan to use for a new query.

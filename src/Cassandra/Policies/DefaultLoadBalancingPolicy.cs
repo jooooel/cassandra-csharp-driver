@@ -84,9 +84,9 @@ namespace Cassandra
         /// <summary>
         /// Initializes the policy.
         /// </summary>
-        public void Initialize(ICluster cluster)
+        public void Initialize(ISession session)
         {
-            ChildPolicy.Initialize(cluster);
+            ChildPolicy.Initialize(session);
         }
 
         /// <summary>

@@ -23,7 +23,7 @@ namespace Cassandra.Connections.Control
     internal interface IControlConnectionFactory
     {
         IControlConnection Create(
-            IInternalCluster cluster,
+            IInternalSession session,
             IProtocolEventDebouncer protocolEventDebouncer,
             ProtocolVersion initialProtocolVersion, 
             Configuration config, 

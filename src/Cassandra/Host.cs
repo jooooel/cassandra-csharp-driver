@@ -293,7 +293,8 @@ namespace Cassandra
         }
 
         /// <summary>
-        /// Testing purposes only. Use <see cref="IInternalCluster.RetrieveAndSetDistance"/> to retrieve distance in a safer way.
+        /// Testing purposes only. Use <see cref="IInternalSession.RetrieveAndSetDistance"/>
+        /// to retrieve distance in a safer way.
         /// </summary>
         /// <returns></returns>
         internal HostDistance GetDistanceUnsafe()

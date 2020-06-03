@@ -607,7 +607,7 @@ namespace Cassandra
                 var totalVersions = 0;
                 while (DateTime.Now.Subtract(start).TotalSeconds < waitSeconds)
                 {
-                    var serializer = ControlConnection.Serializer.GetCurrentSerializer();
+                    var serializer = ControlConnection.SerializerManager.GetCurrentSerializer();
                     var schemaVersionLocalQuery = 
                         new QueryRequest(
                             serializer, 

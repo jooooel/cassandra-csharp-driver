@@ -40,7 +40,7 @@ namespace Cassandra
         /// </summary>
         IPEndPoint LocalAddress { get; }
 
-        ISerializerManager Serializer { get; }
+        ISerializerManager SerializerManager { get; }
 
         Task<IEnumerable<IRow>> QueryAsync(string cqlQuery, bool retry = false);
 

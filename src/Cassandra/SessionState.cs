@@ -68,7 +68,7 @@ namespace Cassandra
             var result = new Dictionary<Host, HostStateInfo>();
             foreach (var kv in pools)
             {
-                var host = session.Cluster.GetHost(kv.Key);
+                var host = session.GetHost(kv.Key);
                 if (host == null)
                 {
                     continue;

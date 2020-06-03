@@ -38,18 +38,18 @@ namespace Cassandra.DataStax.Insights.InfoProviders.StartupMessage
             _retryPolicyInfoProvider = retryPolicyInfoProvider;
         }
         
-        public Dictionary<string, ExecutionProfileInfo> GetInformation(IInternalCluster cluster, IInternalSession session)
+        public Dictionary<string, ExecutionProfileInfo> GetInformation(IInternalSession session)
         {
             // add default first so that it is on top
             var dict = new Dictionary<string, ExecutionProfileInfo>
             {
                 {
                     "default", GetExecutionProfileInfo(
-                        cluster.Configuration.ExecutionProfiles[Configuration.DefaultExecutionProfileName])
+                        session.Configuration.ExecutionProfiles[Configuration.DefaultExecutionProfileName])
                 }
             };
 
-            foreach (var profile in cluster.Configuration
+            foreach (var profile in session.Configuration
                                            .ExecutionProfiles
                                            .Where(kvp => kvp.Key != Configuration.DefaultExecutionProfileName))
             {

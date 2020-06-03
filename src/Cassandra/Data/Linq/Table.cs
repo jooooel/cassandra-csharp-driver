@@ -150,7 +150,7 @@ namespace Cassandra.Data.Linq
 
         public void Create()
         {
-            var serializer = _session.Cluster.Metadata.ControlConnection.Serializer.GetCurrentSerializer();
+            var serializer = _session.Metadata.ControlConnection.SerializerManager.GetCurrentSerializer();
             var cqlQueries = CqlGenerator.GetCreate(serializer, PocoData, Name, KeyspaceName, false);
             foreach (var cql in cqlQueries)
             {
@@ -172,7 +172,7 @@ namespace Cassandra.Data.Linq
 
         public async Task CreateAsync()
         {
-            var serializer = _session.Cluster.Metadata.ControlConnection.Serializer.GetCurrentSerializer();
+            var serializer = _session.Metadata.ControlConnection.SerializerManager.GetCurrentSerializer();
             var cqlQueries = CqlGenerator.GetCreate(serializer, PocoData, Name, KeyspaceName, false);
             foreach (var cql in cqlQueries)
             {

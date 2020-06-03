@@ -32,8 +32,8 @@ namespace Cassandra
         ///  before any call to another of the methods of the policy.
         /// </para>
         /// </summary>
-        /// <param name="cluster">The information about the session instance for which the policy is created.</param>
-        void Initialize(ICluster cluster);
+        /// <param name="session">The information about the session instance for which the policy is created.</param>
+        void Initialize(ISession session);
 
         /// <summary>
         ///  Returns the distance assigned by this policy to the provided host. <p> The

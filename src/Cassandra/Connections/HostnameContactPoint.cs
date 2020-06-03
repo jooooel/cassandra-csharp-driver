@@ -25,6 +25,8 @@ namespace Cassandra.Connections
 {
     internal class HostnameContactPoint : IContactPoint
     {
+        private static readonly Logger Logger = new Logger(typeof(HostnameContactPoint));
+
         private readonly IDnsResolver _dns;
         private readonly ProtocolOptions _protocolOptions;
         private readonly IServerNameResolver _serverNameResolver;
@@ -78,14 +80,18 @@ namespace Cassandra.Connections
             }
             catch (Exception)
             {
-                Cluster.Logger.Warning("Contact point '{0}' could not be resolved.", _hostname);
+                HostnameContactPoint.Logger.Warning(
+                    "Contact point '{0}' could not be resolved.", 
+                    _hostname);
             }
 
             var connectionEndPoints = new List<IConnectionEndPoint>();
 
             if (hostEntry != null && hostEntry.AddressList.Length > 0)
             {
-                Cluster.Logger.Info("Contact point '{0}' resolved to multiple addresses. Will attempt to use them all if necessary: '{1}'",
+                HostnameContactPoint.Logger.Info(
+                    "Contact point '{0}' resolved to multiple addresses. " +
+                    "Will attempt to use them all if necessary: '{1}'",
                     _hostname,
                     string.Join(",", hostEntry.AddressList.Select(resolvedAddress => resolvedAddress.ToString())));
 

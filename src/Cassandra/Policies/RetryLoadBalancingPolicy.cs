@@ -34,9 +34,9 @@ namespace Cassandra
 
         public ILoadBalancingPolicy LoadBalancingPolicy { get; }
 
-        public void Initialize(ICluster cluster)
+        public void Initialize(ISession session)
         {
-            LoadBalancingPolicy.Initialize(cluster);
+            LoadBalancingPolicy.Initialize(session);
         }
 
         public HostDistance Distance(Host host)

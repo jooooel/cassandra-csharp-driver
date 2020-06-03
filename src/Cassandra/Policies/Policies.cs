@@ -19,7 +19,7 @@ using System;
 namespace Cassandra
 {
     /// <summary>
-    /// Represents the policies configured for a <see cref="ICluster"/> instance.
+    /// Represents the policies configured for a <see cref="ISession"/> instance.
     /// </summary>
     public class Policies
     {

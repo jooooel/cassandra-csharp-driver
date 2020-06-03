@@ -93,7 +93,7 @@ namespace Cassandra.Data.Linq
             MapperFactory = mapperFactory;
             StatementFactory = stmtFactory;
             PocoData = pocoData;
-            QueryAbortTimeout = table.GetSession().Cluster.Configuration.DefaultRequestOptions.QueryAbortTimeout;
+            QueryAbortTimeout = table.GetSession().Configuration.DefaultRequestOptions.QueryAbortTimeout;
             _metricsManager = (table.GetSession() as IInternalSession)?.MetricsManager;
         }
 

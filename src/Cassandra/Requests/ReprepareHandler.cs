@@ -31,7 +31,7 @@ namespace Cassandra.Requests
             IInternalSession session, PrepareRequest request, PrepareResult prepareResult)
         {
             var pools = session.GetPools();
-            var hosts = session.InternalCluster.AllHosts();
+            var hosts = session.AllHosts();
             var poolsByHosts = pools.Join(
                 hosts, po => po.Key, 
                 h => h.Address, 

@@ -34,7 +34,7 @@ namespace Cassandra
     /// </summary>
     public class TokenAwarePolicy : ILoadBalancingPolicy
     {
-        private ICluster _cluster;
+        private ISession _session;
         private readonly ThreadLocal<Random> _prng = new ThreadLocal<Random>(() => new Random(
             // Predictable random numbers are OK
             Environment.TickCount * Environment.CurrentManagedThreadId));
@@ -52,10 +52,10 @@ namespace Cassandra
 
         public ILoadBalancingPolicy ChildPolicy { get; }
 
-        public void Initialize(ICluster cluster)
+        public void Initialize(ISession session)
         {
-            _cluster = cluster;
-            ChildPolicy.Initialize(cluster);
+            _session = session;
+            ChildPolicy.Initialize(session);
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace Cassandra
             }
 
             var keyspace = query.Keyspace ?? loggedKeyspace;
-            var replicas = _cluster.GetReplicas(keyspace, routingKey.RawRoutingKey);
+            var replicas = _session.GetReplicas(keyspace, routingKey.RawRoutingKey);
 
             var localReplicaSet = new HashSet<Host>();
             var localReplicaList = new List<Host>(replicas.Count);

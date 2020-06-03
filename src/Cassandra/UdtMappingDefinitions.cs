@@ -30,14 +30,12 @@ namespace Cassandra
     public class UdtMappingDefinitions
     {
         private readonly ConcurrentDictionary<Type, UdtMap> _udtByNetType;
-        private readonly IInternalCluster _cluster;
         private readonly IInternalSession _session;
         private readonly ISerializerManager _serializer;
 
         internal UdtMappingDefinitions(IInternalSession session, ISerializerManager serializer)
         {
             _udtByNetType = new ConcurrentDictionary<Type, UdtMap>();
-            _cluster = session.InternalCluster;
             _session = session;
             _serializer = serializer;
         }
@@ -48,7 +46,9 @@ namespace Cassandra
         /// <exception cref="ArgumentException" />
         public void Define(params UdtMap[] udtMaps)
         {
-            TaskHelper.WaitToComplete(DefineAsync(udtMaps), _cluster.Configuration.DefaultRequestOptions.QueryAbortTimeout);
+            TaskHelper.WaitToComplete(
+                DefineAsync(udtMaps), 
+                _session.Configuration.DefaultRequestOptions.QueryAbortTimeout);
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace Cassandra
         {
             if (udtMaps == null)
             {
-                throw new ArgumentNullException("udtMaps");
+                throw new ArgumentNullException(nameof(udtMaps));
             }
             var sessionKeyspace = _session.Keyspace;
             if (string.IsNullOrEmpty(sessionKeyspace) && udtMaps.Any(map => map.Keyspace == null))
@@ -75,10 +75,10 @@ namespace Cassandra
             // Add types to both indexes
             foreach (var map in udtMaps)
             {
-                var udtDefition = await GetDefinitionAsync(map.Keyspace ?? sessionKeyspace, map).ConfigureAwait(false);
+                var udtDefinition = await GetDefinitionAsync(map.Keyspace ?? sessionKeyspace, map).ConfigureAwait(false);
                 map.SetSerializer(_serializer.GetCurrentSerializer());
-                map.Build(udtDefition);
-                _serializer.SetUdtMap(udtDefition.Name, map);
+                map.Build(udtDefinition);
+                _serializer.SetUdtMap(udtDefinition.Name, map);
                 _udtByNetType.AddOrUpdate(map.NetType, map, (k, oldValue) => map);
             }
         }
@@ -95,7 +95,7 @@ namespace Cassandra
                 //identifiers are lower cased in Cassandra
                 caseSensitiveUdtName = caseSensitiveUdtName.ToLowerInvariant();
             }
-            var udtDefinition = await _cluster.Metadata.GetUdtDefinitionAsync(keyspace, caseSensitiveUdtName).ConfigureAwait(false);
+            var udtDefinition = await _session.Metadata.GetUdtDefinitionAsync(keyspace, caseSensitiveUdtName).ConfigureAwait(false);
             if (udtDefinition == null)
             {
                 throw new InvalidTypeException($"{caseSensitiveUdtName} UDT not found on keyspace {keyspace}");

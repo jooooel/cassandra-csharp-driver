@@ -134,7 +134,7 @@ namespace Cassandra.Tests.Mapping.Linq
             var config = new Configuration();
             var metadata = new Metadata(config);
             var ccMock = new Mock<IControlConnection>(MockBehavior.Strict);
-            ccMock.Setup(cc => cc.Serializer).Returns(serializer);
+            ccMock.Setup(cc => cc.SerializerManager).Returns(serializer);
             metadata.ControlConnection = ccMock.Object;
             var clusterMock = new Mock<ICluster>();
             clusterMock.Setup(c => c.Metadata).Returns(metadata);

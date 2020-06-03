@@ -84,12 +84,9 @@ namespace Cassandra
         /// </summary>
         /// <remarks>
         /// Consider using a <see cref="ISession"/> connected to single keyspace using 
-        /// <see cref="ICluster.Connect(string)"/>.
+        /// <see cref="Builder.WithDefaultKeyspace(string)"/>.
         /// </remarks>
-        public override string Keyspace
-        {
-            get { return _keyspace; }
-        }
+        public override string Keyspace => _keyspace;
 
         /// <summary>
         /// Creates a new instance of <see cref="SimpleStatement"/> without any query string or parameters.

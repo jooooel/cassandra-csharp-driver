@@ -14,14 +14,16 @@
 //   limitations under the License.
 //
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Cassandra.Serialization;
 
 namespace Cassandra.SessionManagement
 {
     internal interface ISessionFactory
     {
         Task<IInternalSession> CreateSessionAsync(
-            IInternalCluster cluster, string keyspace, ISerializerManager serializer, string sessionName);
+            IEnumerable<object> contactPoints,
+            Configuration config,
+            string sessionName);
     }
 }

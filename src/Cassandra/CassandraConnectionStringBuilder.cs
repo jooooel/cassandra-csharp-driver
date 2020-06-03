@@ -94,9 +94,9 @@ namespace Cassandra
             return builder;
         }
 
-        public Builder MakeClusterBuilder()
+        public Builder MakeSessionBuilder()
         {
-            return ApplyToBuilder(Cluster.Builder());
+            return ApplyToBuilder(Session.Builder());
         }
 
         private T DefaultIfNotExists<T>(string name, T def)

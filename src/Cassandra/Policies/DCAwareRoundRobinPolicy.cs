@@ -36,7 +36,7 @@ namespace Cassandra
         private readonly int _maxIndex = int.MaxValue - 10000;
         private volatile List<Host> _hosts;
         private readonly object _hostCreationLock = new object();
-        private ICluster _cluster;
+        private ISession _session;
         private int _index;
 
         /// <summary>
@@ -78,15 +78,15 @@ namespace Cassandra
         /// </summary>
         public string LocalDc { get; private set; }
 
-        public void Initialize(ICluster cluster)
+        public void Initialize(ISession session)
         {
-            _cluster = cluster;
+            _session = session;
 
             //When the pool changes, it should clear the local cache
-            _cluster.HostAdded += _ => ClearHosts();
-            _cluster.HostRemoved += _ => ClearHosts();
+            _session.HostAdded += _ => ClearHosts();
+            _session.HostRemoved += _ => ClearHosts();
 
-            LocalDc = cluster.Configuration.LocalDatacenterProvider.DiscoverLocalDatacenter(
+            LocalDc = session.Configuration.LocalDatacenterProvider.DiscoverLocalDatacenter(
                 _inferLocalDc, LocalDc);
         }
 
@@ -166,7 +166,7 @@ namespace Cassandra
                 }
 
                 //shallow copy the nodes
-                var allNodes = _cluster.AllHosts().ToArray();
+                var allNodes = _session.AllHosts().ToArray();
 
                 hosts = allNodes.Where(h => GetDatacenter(h) == LocalDc).ToList();
                 _hosts = hosts;

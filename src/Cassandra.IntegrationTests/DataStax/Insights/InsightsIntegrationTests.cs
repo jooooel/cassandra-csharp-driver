@@ -49,7 +49,7 @@ namespace Cassandra.IntegrationTests.DataStax.Insights
                           .AddContactPoint(simulacronCluster.InitialContactPoint)
                           .WithApplicationName(InsightsIntegrationTests.applicationName)
                           .WithApplicationVersion(InsightsIntegrationTests.applicationVersion)
-                          .WithClusterId(InsightsIntegrationTests.clusterId)
+                          .WithSessionId(InsightsIntegrationTests.clusterId)
                           .WithSocketOptions(
                               new SocketOptions()
                                   .SetReadTimeoutMillis(5000)

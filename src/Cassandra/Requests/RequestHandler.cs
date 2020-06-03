@@ -91,7 +91,7 @@ namespace Cassandra.Requests
         /// Creates a new instance with no request, suitable for getting a connection.
         /// </summary>
         public RequestHandler(IInternalSession session, ISerializer serializer)
-            : this(session, serializer, null, null, session.Cluster.Configuration.DefaultRequestOptions)
+            : this(session, serializer, null, null, session.Configuration.DefaultRequestOptions)
         {
         }
 
@@ -288,7 +288,7 @@ namespace Cassandra.Requests
         /// (see documentation of <see cref="ValidHost.New"/>)</returns>
         private bool TryValidateHost(Host host, out ValidHost validHost)
         {
-            var distance = _session.InternalCluster.RetrieveAndSetDistance(host);
+            var distance = _session.RetrieveAndSetDistance(host);
             validHost = ValidHost.New(host, distance);
             return validHost != null;
         }
@@ -380,7 +380,8 @@ namespace Cassandra.Requests
         {
             try
             {
-                var execution = _session.Cluster.Configuration.RequestExecutionFactory.Create(this, _session, _request, _requestObserver);
+                var execution = _session.Configuration.RequestExecutionFactory.Create(
+                    this, _session, _request, _requestObserver);
                 var lastHost = execution.Start(false);
                 _running.Add(execution);
                 ScheduleNext(lastHost);
@@ -414,7 +415,8 @@ namespace Cassandra.Requests
             }
             if (_executionPlan == null)
             {
-                _executionPlan = RequestOptions.SpeculativeExecutionPolicy.NewPlan(_session.Keyspace, Statement);
+                _executionPlan = RequestOptions.SpeculativeExecutionPolicy.NewPlan(
+                    _session.Keyspace, Statement);
             }
             var delay = _executionPlan.NextExecution(currentHost);
             if (delay <= 0)
@@ -422,7 +424,7 @@ namespace Cassandra.Requests
                 return;
             }
             //There is one live timer at a time.
-            _nextExecutionTimeout = _session.Cluster.Configuration.Timer.NewTimeout(_ =>
+            _nextExecutionTimeout = _session.Configuration.Timer.NewTimeout(_ =>
             {
                 // Start the speculative execution outside the IO thread
                 Task.Run(() =>

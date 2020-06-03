@@ -22,7 +22,7 @@ namespace Cassandra.DataStax.Insights.InfoProviders.StatusMessage
 {
     internal class NodeStatusInfoProvider : IInsightsInfoProvider<Dictionary<string, NodeStatusInfo>>
     {
-        public Dictionary<string, NodeStatusInfo> GetInformation(IInternalCluster cluster, IInternalSession session)
+        public Dictionary<string, NodeStatusInfo> GetInformation(IInternalSession session)
         {
             var nodeStatusDictionary = new Dictionary<string, NodeStatusInfo>();
             var state = session.GetState();

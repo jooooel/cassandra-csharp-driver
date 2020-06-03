@@ -35,12 +35,12 @@ namespace Cassandra
     /// </summary>
     public class RoundRobinPolicy : ILoadBalancingPolicy
     {
-        ICluster _cluster;
+        ISession _session;
         int _index;
 
-        public void Initialize(ICluster cluster)
+        public void Initialize(ISession session)
         {
-            this._cluster = cluster;
+            _session = session;
         }
 
         /// <summary>
@@ -69,7 +69,7 @@ namespace Cassandra
         public IEnumerable<Host> NewQueryPlan(string keyspace, IStatement query)
         {
             //shallow copy the all hosts
-            var hosts = (from h in _cluster.AllHosts() select h).ToArray();
+            var hosts = (from h in _session.AllHosts() select h).ToArray();
             var startIndex = Interlocked.Increment(ref _index);
 
             //Simplified overflow protection

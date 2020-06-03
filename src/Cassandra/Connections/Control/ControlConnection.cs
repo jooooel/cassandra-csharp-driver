@@ -32,7 +32,7 @@ namespace Cassandra.Connections.Control
 {
     internal class ControlConnection : IControlConnection
     {
-        private readonly IInternalCluster _cluster;
+        private readonly IInternalSession _session;
         private readonly Metadata _metadata;
         private volatile Host _host;
         private volatile IConnectionEndPoint _currentConnectionEndPoint;
@@ -71,17 +71,17 @@ namespace Cassandra.Connections.Control
 
         public IPEndPoint LocalAddress => _connection?.LocalAddress;
 
-        public ISerializerManager Serializer => _serializer;
+        public ISerializerManager SerializerManager => _serializer;
 
         internal ControlConnection(
-            IInternalCluster cluster,
+            IInternalSession session,
             IProtocolEventDebouncer eventDebouncer,
             ProtocolVersion initialProtocolVersion,
             Configuration config,
             Metadata metadata,
             IEnumerable<IContactPoint> contactPoints)
         {
-            _cluster = cluster;
+            _session = session;
             _metadata = metadata;
             _reconnectionPolicy = config.Policies.ReconnectionPolicy;
             _reconnectionSchedule = _reconnectionPolicy.NewSchedule();
@@ -135,7 +135,7 @@ namespace Cassandra.Connections.Control
         private bool TotalConnectivityLoss()
         {
             var currentHosts = _metadata.AllHosts();
-            return currentHosts.Count(h => h.IsUp) == 0 || currentHosts.All(h => !_cluster.AnyOpenConnections(h));
+            return currentHosts.Count(h => h.IsUp) == 0 || currentHosts.All(h => !_session.AnyOpenConnections(h));
         }
 
         private async Task<IEnumerable<IConnectionEndPoint>> ResolveContactPoint(IContactPoint contactPoint, bool isInitializing)
@@ -226,7 +226,7 @@ namespace Cassandra.Connections.Control
                 return true;
             }
 
-            if (_cluster.RetrieveAndSetDistance(host) == HostDistance.Ignored)
+            if (_session.RetrieveAndSetDistance(host) == HostDistance.Ignored)
             {
                 ControlConnection.Logger.Verbose("Skipping {0} because it is ignored.", host.Address.ToString());
                 return false;
@@ -622,7 +622,7 @@ namespace Cassandra.Connections.Control
                 ControlConnection.Logger.Info("Received status change event for host {0} but it was not found", address);
                 return;
             }
-            var distance = _cluster.RetrieveAndSetDistance(host);
+            var distance = _session.RetrieveAndSetDistance(host);
             if (distance != HostDistance.Ignored)
             {
                 // We should not consider events for status changes

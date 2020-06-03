@@ -65,7 +65,7 @@ namespace Cassandra.Mapping
             _mapperFactory = mapperFactory ?? throw new ArgumentNullException(nameof(mapperFactory));
             _statementFactory = statementFactory ?? throw new ArgumentNullException(nameof(statementFactory));
             _cqlGenerator = cqlGenerator ?? throw new ArgumentNullException(nameof(cqlGenerator));
-            _queryAbortTimeout = session.Cluster.Configuration.DefaultRequestOptions.QueryAbortTimeout;
+            _queryAbortTimeout = session.Configuration.DefaultRequestOptions.QueryAbortTimeout;
         }
 
         /// <summary>

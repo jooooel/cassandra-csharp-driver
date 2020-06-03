@@ -21,6 +21,6 @@ namespace Cassandra.DataStax.Insights.MessageFactories
 {
     internal interface IInsightsMessageFactory<T>
     {
-        Insight<T> CreateMessage(IInternalCluster cluster, IInternalSession session);
+        Insight<T> CreateMessage(IInternalSession session);
     }
 }

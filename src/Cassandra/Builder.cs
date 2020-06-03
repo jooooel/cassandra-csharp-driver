@@ -29,11 +29,12 @@ using Cassandra.ExecutionProfiles;
 using Cassandra.Metrics;
 using Cassandra.Metrics.Abstractions;
 using Cassandra.Serialization;
+using Cassandra.Tasks;
 
 namespace Cassandra
 {
     /// <summary>
-    ///  Helper class to build <link>Cluster</link> instances.
+    ///  Helper class to build <see cref="ISession"/> instances.
     /// </summary>
     public class Builder : IInitializer
     {
@@ -43,8 +44,6 @@ namespace Cassandra
 
         private readonly List<object> _contactPoints = new List<object>();
         private const int DefaultQueryAbortTimeout = 20000;
-        private PoolingOptions _poolingOptions;
-        private SocketOptions _socketOptions = new SocketOptions();
         private IAuthInfoProvider _authInfoProvider;
         private IAuthProvider _authProvider = NoneAuthProvider.Instance;
         private CompressionType _compression = CompressionType.NoCompression;
@@ -94,19 +93,19 @@ namespace Cassandra
         }
 
         /// <summary>
-        /// The version of the application using the created cluster instance.
+        /// The version of the application using the created session instance.
         /// </summary>
         public string ApplicationVersion { get; private set; }
 
         /// <summary>
-        /// The name of the application using the created cluster instance.
+        /// The name of the application using the created session instance.
         /// </summary>
         public string ApplicationName { get; private set; }
 
         /// <summary>
-        /// A unique identifier for the created cluster instance.
+        /// A unique identifier for the created session instance.
         /// </summary>
-        public Guid? ClusterId { get; private set; }
+        public Guid? SessionId { get; private set; }
 
         /// <summary>
         /// Gets the DSE Graph options.
@@ -119,11 +118,8 @@ namespace Cassandra
         ///
         /// <returns>the pooling options that will be used by this builder. You can use
         ///  the returned object to define the initial pooling options for the built
-        ///  cluster.</returns>
-        public PoolingOptions PoolingOptions
-        {
-            get { return _poolingOptions; }
-        }
+        ///  session.</returns>
+        public PoolingOptions PoolingOptions { get; private set; }
 
         /// <summary>
         ///  The socket options used by this builder.
@@ -131,11 +127,8 @@ namespace Cassandra
         ///
         /// <returns>the socket options that will be used by this builder. You can use
         ///  the returned object to define the initial socket options for the built
-        ///  cluster.</returns>
-        public SocketOptions SocketOptions
-        {
-            get { return _socketOptions; }
-        }
+        ///  session.</returns>
+        public SocketOptions SocketOptions { get; private set; } = new SocketOptions();
 
         /// <summary>
         /// Gets the contact points that were added as <c>IPEndPoint"</c> instances.
@@ -151,14 +144,27 @@ namespace Cassandra
         }
         
         /// <summary>
-        ///  The configuration that will be used for the new cluster. <p> You <b>should
+        ///  The configuration that will be used for the new session. <p> You <b>should
         ///  not</b> modify this object directly as change made to the returned object may
-        ///  not be used by the cluster build. Instead, you should use the other methods
+        ///  not be used by the session build. Instead, you should use the other methods
         ///  of this <c>Builder</c></p>.
         /// </summary>
         ///
-        /// <returns>the configuration to use for the new cluster.</returns>
-        public Configuration GetConfiguration()
+        /// <returns>the configuration to use for the new session.</returns>
+        Configuration IInitializer.GetConfiguration()
+        {
+            return GetConfiguration();
+        }
+        
+        /// <summary>
+        ///  The configuration that will be used for the new session. <p> You <b>should
+        ///  not</b> modify this object directly as change made to the returned object may
+        ///  not be used by the session build. Instead, you should use the other methods
+        ///  of this <c>Builder</c></p>.
+        /// </summary>
+        ///
+        /// <returns>the configuration to use for the new session.</returns>
+        internal Configuration GetConfiguration()
         {
             if (_bundlePath != null)
             {
@@ -183,8 +189,8 @@ namespace Cassandra
             var config = new Configuration(
                 policies,
                 protocolOptions,
-                _poolingOptions,
-                _socketOptions,
+                PoolingOptions,
+                SocketOptions,
                 clientOptions,
                 _authProvider,
                 _authInfoProvider,
@@ -197,7 +203,7 @@ namespace Cassandra
                 _metricsOptions,
                 _sessionName,
                 graphOptions,
-                ClusterId,
+                SessionId,
                 ApplicationVersion,
                 ApplicationName,
                 _monitorReportingOptions,
@@ -222,7 +228,7 @@ namespace Cassandra
 
             if (profile.ReadTimeoutMillis.HasValue)
             {
-                _socketOptions.SetReadTimeoutMillis(profile.ReadTimeoutMillis.Value);
+                SocketOptions.SetReadTimeoutMillis(profile.ReadTimeoutMillis.Value);
             }
                 
             if (profile.ConsistencyLevel.HasValue)
@@ -302,28 +308,28 @@ namespace Cassandra
 
         /// <summary>
         /// <para>
-        /// An optional configuration for providing a unique identifier for the created cluster instance.
+        /// An optional configuration for providing a unique identifier for the created session instance.
         /// </para>
         /// If not provided, an id will generated.
         /// <para>
         /// This value is passed to the server as a startup option and is useful as metadata for describing a client connection.
         /// </para>
         /// </summary>
-        /// <param name="id">The id to assign to this cluster instance.</param>
+        /// <param name="id">The id to assign to this session instance.</param>
         /// <returns>this instance</returns>
-        public Builder WithClusterId(Guid id)
+        public Builder WithSessionId(Guid id)
         {
-            ClusterId = id;
+            SessionId = id;
             return this;
         }
 
         /// <summary>
         /// <para>
-        /// An optional configuration identifying the name of the application using this cluster instance.
+        /// An optional configuration identifying the name of the application using this session instance.
         /// </para>
         /// This value is passed to the server as a startup option and is useful as metadata for describing a client connection.
         /// </summary>
-        /// <param name="name">The name of the application using this cluster.</param>
+        /// <param name="name">The name of the application using this session.</param>
         /// <returns>this instance</returns>
         public Builder WithApplicationName(string name)
         {
@@ -333,11 +339,11 @@ namespace Cassandra
 
         /// <summary>
         /// <para>
-        /// An optional configuration identifying the version of the application using this cluster instance.
+        /// An optional configuration identifying the version of the application using this session instance.
         /// </para>
         /// This value is passed to the server as a startup option and is useful as metadata for describing a client connection.
         /// </summary>
-        /// <param name="version">The version of the application using this cluster.</param>
+        /// <param name="version">The version of the application using this session.</param>
         /// <returns>this instance</returns>
         public Builder WithApplicationVersion(string version)
         {
@@ -375,7 +381,7 @@ namespace Cassandra
         }
 
         /// <summary>
-        /// Sets the QueryOptions to use for the newly created Cluster.
+        /// Sets the QueryOptions to use for the newly created session.
         ///
         /// If no query options are set through this method, default query
         /// options will be used.
@@ -586,7 +592,7 @@ namespace Cassandra
 
         /// <summary>
         /// <para>
-        /// Configure the load balancing policy to use for the new cluster.
+        /// Configure the load balancing policy to use for the new session.
         /// </para>
         /// <para>
         /// If no load balancing policy is set through this method, <see cref="Policies.DefaultLoadBalancingPolicy"/> will be used instead.
@@ -606,7 +612,7 @@ namespace Cassandra
         }
         
         /// <summary>
-        ///  Configure the reconnection policy to use for the new cluster. <p> If no
+        ///  Configure the reconnection policy to use for the new session. <p> If no
         ///  reconnection policy is set through this method,
         ///  <link>Policies.DefaultReconnectionPolicy</link> will be used instead.</p>
         /// </summary>
@@ -620,7 +626,7 @@ namespace Cassandra
         }
 
         /// <summary>
-        /// Configure the retry policy to be used for the new cluster.
+        /// Configure the retry policy to be used for the new session.
         /// <para>
         /// When the retry policy is not set with this method, the <see cref="Policies.DefaultRetryPolicy" />
         /// will be used instead.
@@ -638,7 +644,7 @@ namespace Cassandra
         }
 
         /// <summary>
-        ///  Configure the speculative execution to use for the new cluster.
+        ///  Configure the speculative execution to use for the new session.
         /// <para>
         /// If no speculative execution policy is set through this method, <see cref="Policies.DefaultSpeculativeExecutionPolicy"/> will be used instead.
         /// </para>
@@ -672,7 +678,7 @@ namespace Cassandra
         }
 
         /// <summary>
-        ///  Configure the cluster by applying settings from ConnectionString.
+        ///  Configure the session by applying settings from ConnectionString.
         /// </summary>
         /// <param name="connectionString"> the ConnectionString to use </param>
         ///
@@ -692,7 +698,7 @@ namespace Cassandra
         /// <param name="username"> the user name to use to login to Cassandra hosts.</param>
         /// <param name="password"> the password corresponding to </param>
         /// <returns>this Builder</returns>
-        public Builder WithCredentials(String username, String password)
+        public Builder WithCredentials(string username, string password)
         {
             _addedAuth = true;
             _authInfoProvider = new SimpleAuthInfoProvider().Add("username", username).Add("password", password);
@@ -716,7 +722,7 @@ namespace Cassandra
         }
 
         /// <summary>
-        ///  Disables row set buffering for the created cluster (row set buffering is enabled by
+        ///  Disables row set buffering for the created session (row set buffering is enabled by
         ///  default otherwise).
         /// </summary>
         ///
@@ -747,7 +753,7 @@ namespace Cassandra
         }
 
         /// <summary>
-        ///  Sets default keyspace name for the created cluster.
+        ///  Sets default keyspace name for the created session.
         /// </summary>
         /// <param name="defaultKeyspace">Default keyspace name.</param>
         /// <returns>this builder</returns>
@@ -762,18 +768,18 @@ namespace Cassandra
         /// </summary>
         public Builder WithSocketOptions(SocketOptions value)
         {
-            _socketOptions = value;
+            SocketOptions = value;
             return this;
         }
 
         public Builder WithPoolingOptions(PoolingOptions value)
         {
-            _poolingOptions = value;
+            PoolingOptions = value;
             return this;
         }
 
         /// <summary>
-        ///  Enables the use of SSL for the created Cluster. Calling this method will use default SSL options.
+        ///  Enables the use of SSL for the created session. Calling this method will use default SSL options.
         /// </summary>
         /// <remarks>
         /// If SSL is enabled, the driver will not connect to any
@@ -790,7 +796,7 @@ namespace Cassandra
         }
 
         /// <summary>
-        ///  Enables the use of SSL for the created Cluster using the provided options.
+        ///  Enables the use of SSL for the created session using the provided options.
         /// </summary>
         /// <remarks>
         /// If SSL is enabled, the driver will not connect to any
@@ -808,7 +814,7 @@ namespace Cassandra
         }
 
         /// <summary>
-        ///  Configures the address translator to use for the new cluster.
+        ///  Configures the address translator to use for the new session.
         /// </summary>
         /// <remarks>
         /// See <see cref="IAddressTranslator"/> for more detail on address translation,
@@ -973,8 +979,8 @@ namespace Cassandra
         /// <para>
         /// Here is an example:
         /// <code>
-        /// var cluster = 
-        ///     Cluster.Builder()
+        /// var session = 
+        ///     Session.Builder()
         ///            .WithMetrics(
         ///                metrics.CreateDriverMetricsProvider(new DriverAppMetricsOptions()),
         ///                new DriverMetricsOptions()
@@ -999,7 +1005,7 @@ namespace Cassandra
 
         /// <summary>
         /// <para>
-        /// Adds Execution Profiles to the Cluster instance.
+        /// Adds Execution Profiles to the session instance.
         /// </para>
         /// <para>
         /// Execution profiles are like configuration presets, multiple methods
@@ -1025,7 +1031,7 @@ namespace Cassandra
         /// </para>
         /// <para>
         /// <code>
-        ///         Cluster.Builder()
+        ///         Session.Builder()
         ///                 .WithExecutionProfiles(options => options
         ///                     .WithProfile("profile1", profileBuilder => profileBuilder
         ///                         .WithReadTimeoutMillis(10000)
@@ -1050,7 +1056,7 @@ namespace Cassandra
         /// specifies what is the default for each option.
         /// </para>
         /// <para>
-        /// In case you disable Metadata synchronization, please ensure you invoke <see cref="ICluster.RefreshSchemaAsync"/> in order to keep the token metadata up to date
+        /// In case you disable Metadata synchronization, please ensure you invoke <see cref="ISession.RefreshSchemaAsync"/> in order to keep the token metadata up to date
         /// otherwise you will not be getting everything you can out of token aware routing, i.e. <see cref="TokenAwarePolicy"/>, which is enabled by the default.
         /// </para>
         /// <para>
@@ -1061,7 +1067,7 @@ namespace Cassandra
         /// <item><description>
         /// Token metadata will not be computed and stored.
         /// This means that token aware routing (<see cref="TokenAwarePolicy"/>, enabled by default) will only work correctly
-        /// if you keep the token metadata up to date using the <see cref="ICluster.RefreshSchemaAsync"/> method.
+        /// if you keep the token metadata up to date using the <see cref="ISession.RefreshSchemaAsync"/> method.
         /// If you wish to go this route of manually refreshing the metadata then
         /// it's recommended to refresh only the keyspaces that this application will use, by passing the <code>keyspace</code> parameter.
         /// </description></item>
@@ -1090,27 +1096,25 @@ namespace Cassandra
         }
         
         /// <summary>
-        /// <see cref="ISession"/> objects created through the <see cref="ICluster"/> built from this builder will have <see cref="ISession.SessionName"/>
+        /// <see cref="ISession"/> objects created through the <see cref="ISession"/> built from this builder will have <see cref="ISession.SessionName"/>
         /// set to the value provided in this method.
-        /// The first session created by this cluster instance will have its name set exactly as it is provided in this method.
-        /// Any session created by the <see cref="ICluster"/> built from this builder after the first one will have its name set as a concatenation
+        /// The first session will have its name set exactly as it is provided in this method.
+        /// Any session created after the first one will have its name set as a concatenation
         /// of the provided value plus a counter.
         /// <code>
-        ///         var cluster = Cluster.Builder().WithSessionName("main-session").Build();
-        ///         var session = cluster.Connect(); // session.SessionName == "main-session"
-        ///         var session1 = cluster.Connect(); // session1.SessionName == "main-session1"
-        ///         var session2 = cluster.Connect(); // session2.SessionName == "main-session2"
+        ///         var session = Session.Builder().WithSessionName("main-session").Build(); // session.SessionName == "main-session"
+        ///         var session1 = Session.Builder().WithSessionName("main-session").Build(); // session1.SessionName == "main-session1"
+        ///         var session2 = Session.Builder().WithSessionName("main-session").Build(); // session2.SessionName == "main-session2"
+        ///         var session3 = Session.Builder().WithSessionName("main-session").Build(); // session3.SessionName == "main-session3"
         /// </code>
         /// If this setting is not set, the default session names will be "s0", "s1", "s2", etc.
         /// <code>
-        ///         var cluster = Cluster.Builder().Build();
-        ///         var session = cluster.Connect(); // session.SessionName == "s0"
-        ///         var session1 = cluster.Connect(); // session1.SessionName == "s1"
-        ///         var session2 = cluster.Connect(); // session2.SessionName == "s2"
+        ///         var session = Session.Builder().Build(); // session.SessionName == "s0"
+        ///         var session1 = Session.Builder().Build(); // session1.SessionName == "s1"
+        ///         var session2 = Session.Builder().Build(); // session2.SessionName == "s2"
+        ///         var session3 = Session.Builder().Build(); // session3.SessionName == "s3"
         /// </code>
         /// </summary>
-        /// <param name="sessionName"></param>
-        /// <returns></returns>
         public Builder WithSessionName(string sessionName)
         {
             _sessionName = sessionName ?? throw new ArgumentNullException(nameof(sessionName));
@@ -1119,13 +1123,13 @@ namespace Cassandra
 
         /// <summary>
         /// <para>
-        /// Configures a Cluster using the Cloud Secure Connection Bundle.
+        /// Configures a Session using the Cloud Secure Connection Bundle.
         /// Using this method will configure this builder with specific contact points, SSL options, credentials and load balancing policy.
         /// When needed, you can specify custom settings by calling other builder methods. 
         /// </para>
         /// <para>
         /// In case you need to specify a different set of credentials from the one in the bundle, here is an example:        /// <code>
-        ///         Cluster.Builder()
+        ///         Session.Builder()
         ///                   .WithCloudSecureConnectionBundle("/path/to/bundle.zip")
         ///                   .WithCredentials("username", "password")
         ///                   .Build();
@@ -1173,7 +1177,7 @@ namespace Cassandra
         }
 
         /// <summary>
-        /// Configures options related to Monitor Reporting for the new cluster.
+        /// Configures options related to Monitor Reporting for the new session.
         /// By default, Monitor Reporting is enabled for server types and versions that support it.
         /// </summary>
         /// <returns>This Builder.</returns>
@@ -1183,7 +1187,7 @@ namespace Cassandra
         }
 
         /// <summary>
-        /// Configures options related to Monitor Reporting for the new cluster.
+        /// Configures options related to Monitor Reporting for the new session.
         /// By default, Monitor Reporting is enabled server types and versions that support it.
         /// </summary>
         /// <returns>This Builder.</returns>
@@ -1194,17 +1198,31 @@ namespace Cassandra
         }
 
         /// <summary>
-        ///  Build the cluster with the configured set of initial contact points and policies.
+        ///  Build the session with the configured set of initial contact points and policies.
         /// </summary>
         /// <exception cref="NoHostAvailableException">Throws a NoHostAvailableException when no host could be resolved.</exception>
         /// <exception cref="ArgumentException">Throws an ArgumentException when no contact point was provided.</exception>
-        /// <returns>the newly build Cluster instance. </returns>
-        public Cluster Build()
+        /// <returns>the newly build Session instance. </returns>
+        public ISession Build()
+        {
+            return TaskHelper.WaitToComplete(BuildAsync());
+        }
+        
+        /// <summary>
+        ///  Build the session with the configured set of initial contact points and policies.
+        /// </summary>
+        /// <exception cref="NoHostAvailableException">Throws a NoHostAvailableException when no host could be resolved.</exception>
+        /// <exception cref="ArgumentException">Throws an ArgumentException when no contact point was provided.</exception>
+        /// <returns>the newly build Session instance. </returns>
+        public Task<ISession> BuildAsync()
         {
             // call GetConfiguration first in case it's a cloud cluster and this will set the contact points
             var config = GetConfiguration();
 
-            return Cluster.BuildFrom(this, _contactPoints.Where(c => !(c is IPEndPoint)).ToList(), config);
+            return Session.BuildFromAsync(
+                this, 
+                _contactPoints.Where(c => !(c is IPEndPoint)).ToList(), 
+                config);
         }
         
         /// <summary>

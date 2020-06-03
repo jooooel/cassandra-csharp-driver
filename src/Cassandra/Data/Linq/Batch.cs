@@ -52,7 +52,7 @@ namespace Cassandra.Data.Linq
             _session = session;
             _metricsManager = (session as IInternalSession)?.MetricsManager;
             _batchType = batchType;
-            QueryAbortTimeout = session.Cluster.Configuration.DefaultRequestOptions.QueryAbortTimeout;
+            QueryAbortTimeout = session.Configuration.DefaultRequestOptions.QueryAbortTimeout;
         }
 
         public abstract void Append(CqlCommand cqlCommand);

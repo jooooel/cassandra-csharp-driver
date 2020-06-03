@@ -509,7 +509,7 @@ namespace Cassandra
             {
                 return null;
             }
-            return cc.Serializer.GetCurrentSerializer().Deserialize(buffer, 0, buffer.Length, typeCode, typeInfo);
+            return cc.SerializerManager.GetCurrentSerializer().Deserialize(buffer, 0, buffer.Length, typeCode, typeInfo);
         }
     }
 

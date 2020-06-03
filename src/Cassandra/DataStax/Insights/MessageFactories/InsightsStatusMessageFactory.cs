@@ -38,17 +38,17 @@ namespace Cassandra.DataStax.Insights.MessageFactories
             _connectedNodesInfoProvider = connectedNodesInfoProvider;
         }
 
-        public Insight<InsightsStatusData> CreateMessage(IInternalCluster cluster, IInternalSession session)
+        public Insight<InsightsStatusData> CreateMessage(IInternalSession session)
         {
             var metadata = _insightsMetadataFactory.CreateInsightsMetadata(
                 InsightsStatusMessageFactory.StatusMessageName, InsightsStatusMessageFactory.StatusV1MappingId, InsightType.Event);
 
             var data = new InsightsStatusData
             {
-                ClientId = cluster.Configuration.ClusterId.ToString(),
+                ClientId = session.Configuration.ClusterId.ToString(),
                 SessionId = session.InternalSessionId.ToString(),
-                ControlConnection = cluster.Metadata.ControlConnection.EndPoint?.GetHostIpEndPointWithFallback().ToString(),
-                ConnectedNodes = _connectedNodesInfoProvider.GetInformation(cluster, session)
+                ControlConnection = session.Metadata.ControlConnection.EndPoint?.GetHostIpEndPointWithFallback().ToString(),
+                ConnectedNodes = _connectedNodesInfoProvider.GetInformation(session)
             };
 
             return new Insight<InsightsStatusData>

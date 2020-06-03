@@ -27,7 +27,7 @@ namespace Cassandra
     ///  implement a custom <c>Initializer</c> that retrieve initialization from
     ///  a web-service or from a configuration file for instance.</p>
     /// </summary>
-    public interface IInitializer
+    internal interface IInitializer
     {
         /// <summary>
         ///  Gets the initial Cassandra hosts to connect to.See

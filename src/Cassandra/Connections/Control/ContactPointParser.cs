@@ -22,6 +22,8 @@ namespace Cassandra.Connections.Control
 {
     internal class ContactPointParser : IContactPointParser
     {
+        private static readonly Logger Logger = new Logger(typeof(ContactPointParser));
+
         private readonly IDnsResolver _dnsResolver;
         private readonly ProtocolOptions _protocolOptions;
         private readonly IServerNameResolver _serverNameResolver;
@@ -81,7 +83,9 @@ namespace Cassandra.Connections.Control
                 
                 if (result.Contains(parsedContactPoint))
                 {
-                    Cluster.Logger.Warning("Found duplicate contact point: {0}. Ignoring it.", contactPoint.ToString());
+                    ContactPointParser.Logger.Warning(
+                        "Found duplicate contact point: {0}. Ignoring it.", 
+                        contactPoint.ToString());
                     continue;
                 }
 

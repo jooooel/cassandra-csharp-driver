@@ -161,24 +161,21 @@ namespace Cassandra
                 MaybeFetchTrace();
                 return _clientAddress;
             }
-            internal set { _clientAddress = value; }
+            internal set => _clientAddress = value;
         }
 
         public QueryTrace(Guid traceId, ISession session)
         {
             if (session == null)
             {
-                throw new ArgumentNullException("session");
+                throw new ArgumentNullException(nameof(session));
             }
-            if (session.Cluster == null)
-            {
-                throw new NullReferenceException("session.Cluster is null");
-            }
+
             //The instance is created before fetching the actual trace metadata
             //The properties will be populated later.
             _traceId = traceId;
-            _metadata = session.Cluster.Metadata;
-            _metadataFetchSyncTimeout = session.Cluster.Configuration.DefaultRequestOptions.QueryAbortTimeout;
+            _metadata = session.Metadata;
+            _metadataFetchSyncTimeout = session.Configuration.DefaultRequestOptions.QueryAbortTimeout;
         }
 
         public override string ToString()

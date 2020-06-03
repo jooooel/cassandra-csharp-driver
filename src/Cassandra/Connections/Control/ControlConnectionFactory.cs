@@ -23,7 +23,7 @@ namespace Cassandra.Connections.Control
     internal class ControlConnectionFactory : IControlConnectionFactory
     {
         public IControlConnection Create(
-            IInternalCluster cluster,
+            IInternalSession session,
             IProtocolEventDebouncer protocolEventDebouncer, 
             ProtocolVersion initialProtocolVersion, 
             Configuration config, 
@@ -31,7 +31,7 @@ namespace Cassandra.Connections.Control
             IEnumerable<IContactPoint> contactPoints)
         {
             return new ControlConnection(
-                cluster,
+                session,
                 protocolEventDebouncer, 
                 initialProtocolVersion, 
                 config, 

@@ -90,7 +90,7 @@ namespace Cassandra.Data.Linq
                 throw new ArgumentNullException(nameof(executionProfile));
             }
             
-            var queryAbortTimeout = GetTable().GetSession().Cluster.Configuration.ClientOptions.QueryAbortTimeout;
+            var queryAbortTimeout = GetTable().GetSession().Configuration.ClientOptions.QueryAbortTimeout;
             return WaitToCompleteWithMetrics(ExecuteAsync(executionProfile), queryAbortTimeout);
         }
         

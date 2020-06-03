@@ -21,23 +21,23 @@ namespace Cassandra.DataStax.Insights.InfoProviders.StartupMessage
 {
     internal class DataCentersInfoProvider : IInsightsInfoProvider<HashSet<string>>
     {
-        public HashSet<string> GetInformation(IInternalCluster cluster, IInternalSession session)
+        public HashSet<string> GetInformation(IInternalSession session)
         {
             var dataCenters = new HashSet<string>();
             var remoteConnectionsLength =
-                cluster
+                session
                     .Configuration
-                    .GetOrCreatePoolingOptions(cluster.Metadata.ControlConnection.ProtocolVersion)
+                    .GetOrCreatePoolingOptions(session.Metadata.ControlConnection.ProtocolVersion)
                     .GetCoreConnectionsPerHost(HostDistance.Remote);
 
-            foreach (var h in cluster.AllHosts()) 
+            foreach (var h in session.AllHosts()) 
             {
                 if (h.Datacenter == null)
                 {
                     continue;
                 }
 
-                var distance = cluster.Configuration.Policies.LoadBalancingPolicy.Distance(h);
+                var distance = session.Configuration.Policies.LoadBalancingPolicy.Distance(h);
                 if (distance == HostDistance.Local || (distance == HostDistance.Remote && remoteConnectionsLength > 0))
                 {
                     dataCenters.Add(h.Datacenter);

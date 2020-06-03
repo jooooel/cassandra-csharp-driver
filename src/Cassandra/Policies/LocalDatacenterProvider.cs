@@ -24,15 +24,15 @@ namespace Cassandra
     {
         private bool _initialized = false;
 
-        private IInternalCluster _cluster;
+        private IInternalSession _session;
         private IEnumerable<string> _availableDcs;
         private string _availableDcsStr;
         private string _cachedDatacenter;
 
-        public void Initialize(IInternalCluster cluster)
+        public void Initialize(IInternalSession session)
         {
-            _cluster = cluster;
-            _availableDcs = _cluster.AllHosts().Select(h => h.Datacenter).Where(dc => dc != null).Distinct().ToList();
+            _session = session;
+            _availableDcs = _session.AllHosts().Select(h => h.Datacenter).Where(dc => dc != null).Distinct().ToList();
             _availableDcsStr = string.Join(", ", _availableDcs);
             _initialized = true;
         }
@@ -54,13 +54,13 @@ namespace Cassandra
                 return _cachedDatacenter;
             }
 
-            if (!string.IsNullOrEmpty(_cluster.Configuration.LocalDatacenter))
+            if (!string.IsNullOrEmpty(_session.Configuration.LocalDatacenter))
             {
-                _cachedDatacenter = ValidateAndReturnDatacenter(_cluster.Configuration.LocalDatacenter);
+                _cachedDatacenter = ValidateAndReturnDatacenter(_session.Configuration.LocalDatacenter);
                 return _cachedDatacenter;
             }
 
-            if (!_cluster.ImplicitContactPoint && !inferLocalDc)
+            if (!_session.ImplicitContactPoint && !inferLocalDc)
             {
                 throw new InvalidOperationException(
                     "Since you provided explicit contact points, the local datacenter must be explicitly set. " +
@@ -86,7 +86,7 @@ namespace Cassandra
 
         private string InferLocalDatacenter()
         {
-            var cc = _cluster.GetControlConnection();
+            var cc = _session.GetControlConnection();
             if (cc == null)
             {
                 throw new DriverInternalError("ControlConnection was not correctly set");

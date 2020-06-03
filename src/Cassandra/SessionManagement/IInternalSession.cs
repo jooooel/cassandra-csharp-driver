@@ -15,14 +15,18 @@
 //
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 
 using Cassandra.Connections;
+using Cassandra.Connections.Control;
 using Cassandra.ExecutionProfiles;
 using Cassandra.Metrics.Internal;
 using Cassandra.Observers.Abstractions;
+using Cassandra.Requests;
+using Cassandra.Serialization;
 
 namespace Cassandra.SessionManagement
 {
@@ -66,8 +70,6 @@ namespace Cassandra.SessionManagement
         /// Gets or sets the keyspace
         /// </summary>
         new string Keyspace { get; set; }
-
-        IInternalCluster InternalCluster { get; }
         
         /// <summary>
         /// Fetches the request options that were mapped from the provided execution profile's name.
@@ -82,5 +84,36 @@ namespace Cassandra.SessionManagement
         IMetricsManager MetricsManager { get; }
 
         IObserverFactory ObserverFactory { get; }
+
+        /// <summary>
+        /// Executes the prepare request on the first host selected by the load balancing policy.
+        /// When <see cref="QueryOptions.IsPrepareOnAllHosts"/> is enabled, it prepares on the rest of the hosts in
+        /// parallel.
+        /// In case the statement was already in the prepared statements cache, logs an warning but prepares it anyway.
+        /// </summary>
+        Task<PreparedStatement> Prepare(IInternalSession session, ISerializerManager serializerManager, PrepareRequest request);
+        
+        /// <summary>
+        /// Gets the the prepared statements cache
+        /// </summary>
+        ConcurrentDictionary<byte[], PreparedStatement> PreparedQueries { get; }
+
+        bool AnyOpenConnections(Host host);
+        
+        /// <summary>
+        /// Helper method to retrieve the aggregate distance from all configured LoadBalancingPolicies and set it at Host level.
+        /// </summary>
+        HostDistance RetrieveAndSetDistance(Host host);
+        
+        /// <summary>
+        /// Gets the control connection used by the session
+        /// </summary>
+        IControlConnection GetControlConnection();
+
+        /// <summary>
+        /// If contact points are not provided in the builder, the driver will use localhost
+        /// as an implicit contact point.
+        /// </summary>
+        bool ImplicitContactPoint { get; }
     }
 }

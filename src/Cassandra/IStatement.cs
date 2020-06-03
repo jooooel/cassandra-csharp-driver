@@ -136,7 +136,7 @@ namespace Cassandra
         /// </summary>
         /// <remarks>
         /// Consider using a <see cref="ISession"/> connected to single keyspace using 
-        /// <see cref="ICluster.Connect(string)"/>.
+        /// <see cref="Builder.WithDefaultKeyspace(string)"/>.
         /// </remarks>
         string Keyspace { get; }
 
@@ -205,7 +205,7 @@ namespace Cassandra
         /// Sets the retry policy to use for this query.
         /// <para>
         /// Calling this method is only required when you want to override the default 
-        /// <see cref="Policies.RetryPolicy"/> set in the cluster configuration for this request or the one set
+        /// <see cref="Policies.RetryPolicy"/> set in the session configuration for this request or the one set
         /// in the execution profile (see <see cref="IExecutionProfile.RetryPolicy"/>) for this request.
         /// </para>
         /// <para>

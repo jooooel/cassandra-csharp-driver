@@ -34,7 +34,6 @@ namespace Cassandra.DataStax.Insights
 
         private static readonly Logger Logger = new Logger(typeof(InsightsClient));
 
-        private readonly IInternalCluster _cluster;
         private readonly IInternalSession _session;
         private readonly MonitorReportingOptions _monitorReportingOptions;
         private readonly IInsightsMessageFactory<InsightsStartupData> _startupMessageFactory;
@@ -45,14 +44,12 @@ namespace Cassandra.DataStax.Insights
         private volatile int _errorCount = 0;
 
         public InsightsClient(
-            IInternalCluster cluster,
             IInternalSession session,
             IInsightsMessageFactory<InsightsStartupData> startupMessageFactory,
             IInsightsMessageFactory<InsightsStatusData> statusMessageFactory)
         {
-            _cluster = cluster;
             _session = session;
-            _monitorReportingOptions = cluster.Configuration.MonitorReportingOptions;
+            _monitorReportingOptions = session.Configuration.MonitorReportingOptions;
             _startupMessageFactory = startupMessageFactory;
             _statusMessageFactory = statusMessageFactory;
         }
@@ -63,7 +60,7 @@ namespace Cassandra.DataStax.Insights
         {
             try
             {
-                await SendJsonMessageAsync(_startupMessageFactory.CreateMessage(_cluster, _session)).ConfigureAwait(false);
+                await SendJsonMessageAsync(_startupMessageFactory.CreateMessage(_session)).ConfigureAwait(false);
                 _errorCount = 0;
                 return true;
             }
@@ -85,7 +82,7 @@ namespace Cassandra.DataStax.Insights
         {
             try
             {
-                await SendJsonMessageAsync(_statusMessageFactory.CreateMessage(_cluster, _session)).ConfigureAwait(false);
+                await SendJsonMessageAsync(_statusMessageFactory.CreateMessage(_session)).ConfigureAwait(false);
                 _errorCount = 0;
                 return true;
             }
@@ -133,7 +130,8 @@ namespace Cassandra.DataStax.Insights
 
         private bool ShouldStartInsightsTask()
         {
-            return _monitorReportingOptions.MonitorReportingEnabled && _cluster.Configuration.InsightsSupportVerifier.SupportsInsights(_cluster);
+            return _monitorReportingOptions.MonitorReportingEnabled 
+                   && _session.Configuration.InsightsSupportVerifier.SupportsInsights(_session);
         }
 
         private async Task MainLoopAsync()
@@ -189,7 +187,7 @@ namespace Cassandra.DataStax.Insights
                 ConsistencyLevel.Any);
 
             var response = await RunWithTokenAsync(() => 
-                _cluster.Metadata.ControlConnection.UnsafeSendQueryRequestAsync(
+                _session.Metadata.ControlConnection.UnsafeSendQueryRequestAsync(
                     InsightsClient.ReportInsightRpc, 
                     queryProtocolOptions)).ConfigureAwait(false);
 
