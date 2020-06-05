@@ -34,27 +34,21 @@ namespace Cassandra.Tests.DataStax.Graph
 {
     public class ExecuteGraphTests : BaseUnitTest
     {
-        private ICluster _cluster;
-
-        private static ISession NewInstance(ICluster cluster)
-        {
-            return cluster.Connect();
-        }
-
+        private ISession _session;
+        
         [TearDown]
         public void TearDown()
         {
-            _cluster?.Dispose();
-            _cluster = null;
+            _session?.Dispose();
+            _session = null;
         }
 
         [Test]
-        public void ExecuteGraph_Should_Call_ExecuteAsync_With_SimpleStatement()
+        public async Task ExecuteGraph_Should_Call_ExecuteAsync_With_SimpleStatement()
         {
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatement = stmt);
-            var session = _cluster.Connect();
-            session.ExecuteGraph(new SimpleGraphStatement("g.V()"));
+            _session = await ExecuteGraphTests.GetSession(stmt => coreStatement = stmt).ConfigureAwait(false);
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V()"));
             Assert.NotNull(coreStatement);
             Assert.Null(coreStatement.Timestamp);
             Assert.Null(coreStatement.ConsistencyLevel);
@@ -62,43 +56,42 @@ namespace Cassandra.Tests.DataStax.Graph
         }
 
         [Test]
-        public void ExecuteGraph_Should_Call_ExecuteAsync_With_Timestamp_Set()
+        public async Task ExecuteGraph_Should_Call_ExecuteAsync_With_Timestamp_Set()
         {
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatement = stmt);
-            var session = _cluster.Connect();
+            _session = await ExecuteGraphTests.GetSession(stmt => coreStatement = stmt).ConfigureAwait(false);
             var timestamp = DateTimeOffset.Now;
-            session.ExecuteGraph(new SimpleGraphStatement("g.V()").SetTimestamp(timestamp));
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V()").SetTimestamp(timestamp));
             Assert.NotNull(coreStatement);
             Assert.Null(coreStatement.ConsistencyLevel);
             Assert.AreEqual(coreStatement.Timestamp, timestamp);
         }
 
         [Test]
-        public void ExecuteGraph_Should_Call_ExecuteAsync_With_ConsistencyLevel_Set()
+        public async Task ExecuteGraph_Should_Call_ExecuteAsync_With_ConsistencyLevel_Set()
         {
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatement = stmt);
-            var session = _cluster.Connect();
+            _session = await ExecuteGraphTests.GetSession(stmt => coreStatement = stmt).ConfigureAwait(false);
             const ConsistencyLevel consistency = ConsistencyLevel.Three;
-            session.ExecuteGraph(new SimpleGraphStatement("g.V()").SetConsistencyLevel(consistency));
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V()").SetConsistencyLevel(consistency));
             Assert.NotNull(coreStatement);
             Assert.AreEqual(coreStatement.ConsistencyLevel, consistency);
             Assert.Null(coreStatement.Timestamp);
         }
 
         [Test]
-        public void ExecuteGraph_Should_Call_ExecuteAsync_With_ReadTimeout_Set_To_Default()
+        public async Task ExecuteGraph_Should_Call_ExecuteAsync_With_ReadTimeout_Set_To_Default()
         {
             const int readTimeout = 5000;
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatement = stmt, new GraphOptions().SetReadTimeoutMillis(readTimeout));
-            var session = _cluster.Connect();
-            session.ExecuteGraph(new SimpleGraphStatement("g.V()"));
+            _session = await ExecuteGraphTests.GetSession(
+                stmt => coreStatement = stmt, 
+                new GraphOptions().SetReadTimeoutMillis(readTimeout)).ConfigureAwait(false);
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V()"));
             Assert.NotNull(coreStatement);
             Assert.AreEqual(readTimeout, coreStatement.ReadTimeoutMillis);
             //Another one with the statement level timeout set to zero
-            session.ExecuteGraph(new SimpleGraphStatement("g.V()").SetReadTimeoutMillis(0));
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V()").SetReadTimeoutMillis(0));
             Assert.NotNull(coreStatement);
             Assert.AreEqual(readTimeout, coreStatement.ReadTimeoutMillis);
             Assert.True(coreStatement.OutgoingPayload.ContainsKey("request-timeout"));
@@ -106,14 +99,15 @@ namespace Cassandra.Tests.DataStax.Graph
         }
 
         [Test]
-        public void ExecuteGraph_Should_Call_ExecuteAsync_With_ReadTimeout_Set_From_Statement()
+        public async Task ExecuteGraph_Should_Call_ExecuteAsync_With_ReadTimeout_Set_From_Statement()
         {
             const int defaultReadTimeout = 15000;
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatement = stmt, new GraphOptions().SetReadTimeoutMillis(defaultReadTimeout));
-            var session = _cluster.Connect();
+            _session = await ExecuteGraphTests.GetSession(
+                stmt => coreStatement = stmt, 
+                new GraphOptions().SetReadTimeoutMillis(defaultReadTimeout)).ConfigureAwait(false);
             const int readTimeout = 6000;
-            session.ExecuteGraph(new SimpleGraphStatement("g.V()").SetReadTimeoutMillis(readTimeout));
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V()").SetReadTimeoutMillis(readTimeout));
             Assert.NotNull(coreStatement);
             Assert.AreEqual(readTimeout, coreStatement.ReadTimeoutMillis);
             Assert.True(coreStatement.OutgoingPayload.ContainsKey("request-timeout"));
@@ -121,16 +115,15 @@ namespace Cassandra.Tests.DataStax.Graph
         }
 
         [Test]
-        public void ExecuteGraph_Should_Call_ExecuteAsync_With_Dictionary_Parameters_Set()
+        public async Task ExecuteGraph_Should_Call_ExecuteAsync_With_Dictionary_Parameters_Set()
         {
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatement = stmt);
-            var session = _cluster.Connect();
+            _session = await ExecuteGraphTests.GetSession(stmt => coreStatement = stmt).ConfigureAwait(false);
             var parameters = new Dictionary<string, object>
             {
                 { "myName", "is what"}
             };
-            session.ExecuteGraph(new SimpleGraphStatement(parameters, "g.V().has('name', myName)"));
+            _session.ExecuteGraph(new SimpleGraphStatement(parameters, "g.V().has('name', myName)"));
             Assert.NotNull(coreStatement);
             Assert.AreEqual("g.V().has('name', myName)", coreStatement.QueryString);
             //A single parameter with the key/values json stringified
@@ -138,7 +131,7 @@ namespace Cassandra.Tests.DataStax.Graph
         }
 
         [Test]
-        public void ExecuteGraph_Should_Wrap_RowSet()
+        public async Task ExecuteGraph_Should_Wrap_RowSet()
         {
             var rowMock1 = new Mock<Row>();
             rowMock1.Setup(r => r.GetValue<string>(It.Is<string>(n => n == "gremlin"))).Returns("{\"result\": 100}");
@@ -152,9 +145,8 @@ namespace Cassandra.Tests.DataStax.Graph
             var rsMock = new Mock<RowSet>();
             rsMock.Setup(r => r.GetEnumerator()).Returns(() => rows.GetEnumerator());
             
-            _cluster = ExecuteGraphTests.GetCluster(stmt => { }, null, rsMock.Object);
-            var session = _cluster.Connect();
-            var rsGraph = session.ExecuteGraph(new SimpleGraphStatement("g.V()"));
+            _session = await ExecuteGraphTests.GetSession(stmt => { }, null, rsMock.Object).ConfigureAwait(false);
+            var rsGraph = _session.ExecuteGraph(new SimpleGraphStatement("g.V()"));
             Assert.NotNull(rsGraph);
             var resultArray = rsGraph.ToArray();
             Assert.AreEqual(2, resultArray.Length);
@@ -162,12 +154,11 @@ namespace Cassandra.Tests.DataStax.Graph
         }
 
         [Test]
-        public void ExecuteGraph_Should_Build_Payload_With_Default_Values()
+        public async Task ExecuteGraph_Should_Build_Payload_With_Default_Values()
         {
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatement = stmt);
-            var session = _cluster.Connect();
-            session.ExecuteGraph(new SimpleGraphStatement("g.V()"));
+            _session = await ExecuteGraphTests.GetSession(stmt => coreStatement = stmt).ConfigureAwait(false);
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V()"));
             Assert.NotNull(coreStatement);
             Assert.NotNull(coreStatement.OutgoingPayload);
             //The default graph payload
@@ -176,19 +167,18 @@ namespace Cassandra.Tests.DataStax.Graph
         }
 
         [Test]
-        public void ExecuteGraph_Should_Build_Payload_With_GraphOptions()
+        public async Task ExecuteGraph_Should_Build_Payload_With_GraphOptions()
         {
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(
+            _session = await ExecuteGraphTests.GetSession(
                 stmt => coreStatement = stmt, 
                 new GraphOptions()
                     .SetName("name1")
                     .SetSource("My source!")
                     .SetReadTimeoutMillis(22222)
                     .SetReadConsistencyLevel(ConsistencyLevel.LocalQuorum)
-                    .SetWriteConsistencyLevel(ConsistencyLevel.EachQuorum));
-            var session = _cluster.Connect();
-            session.ExecuteGraph(new SimpleGraphStatement("g.V()"));
+                    .SetWriteConsistencyLevel(ConsistencyLevel.EachQuorum)).ConfigureAwait(false);
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V()"));
             Assert.NotNull(coreStatement);
             Assert.NotNull(coreStatement.OutgoingPayload);
             Assert.That(Encoding.UTF8.GetString(coreStatement.OutgoingPayload["graph-source"]), Is.EqualTo("My source!"));
@@ -201,18 +191,17 @@ namespace Cassandra.Tests.DataStax.Graph
         }
 
         [Test]
-        public void ExecuteGraph_Should_Build_Payload_With_Statement_Properties()
+        public async Task ExecuteGraph_Should_Build_Payload_With_Statement_Properties()
         {
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(
+            _session = await ExecuteGraphTests.GetSession(
                 stmt => coreStatement = stmt, 
                 new GraphOptions()
                     .SetName("name1")
                     .SetSource("My source!")
                     .SetReadConsistencyLevel(ConsistencyLevel.LocalQuorum)
-                    .SetWriteConsistencyLevel(ConsistencyLevel.EachQuorum));
-            var session = _cluster.Connect();
-            session.ExecuteGraph(new SimpleGraphStatement("g.V()")
+                    .SetWriteConsistencyLevel(ConsistencyLevel.EachQuorum)).ConfigureAwait(false);
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V()")
                 .SetGraphLanguage("my-lang")
                 .SetReadTimeoutMillis(5555)
                 .SetSystemQuery()
@@ -230,51 +219,48 @@ namespace Cassandra.Tests.DataStax.Graph
         }
 
         [Test]
-        public void ExecuteGraph_Should_Allow_GraphNode_As_Parameters()
+        public async Task ExecuteGraph_Should_Allow_GraphNode_As_Parameters()
         {
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatement = stmt);
-            var session = _cluster.Connect();
+            _session = await ExecuteGraphTests.GetSession(stmt => coreStatement = stmt).ConfigureAwait(false);
             const string expectedJson =
                 "{\"member_id\":123,\"community_id\":586910,\"~label\":\"vertex\",\"group_id\":2}";
             var id = new GraphNode("{\"result\":" + expectedJson + "}");
-            session.ExecuteGraph(new SimpleGraphStatement("g.V(vertexId)", new { vertexId = id }));
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V(vertexId)", new { vertexId = id }));
             Assert.NotNull(coreStatement);
             Assert.AreEqual(1, coreStatement.QueryValues.Length);
             Assert.AreEqual("{\"vertexId\":" + expectedJson + "}", coreStatement.QueryValues[0]);
         }
 
         [Test]
-        public void ExecuteGraph_Should_Allow_BigInteger_As_Parameters()
+        public async Task ExecuteGraph_Should_Allow_BigInteger_As_Parameters()
         {
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatement = stmt);
-            var session = _cluster.Connect();
+            _session = await ExecuteGraphTests.GetSession(stmt => coreStatement = stmt).ConfigureAwait(false);
             var value = BigInteger.Parse("1234567890123456789123456789");
-            session.ExecuteGraph(new SimpleGraphStatement("g.V(vertexId)", new { value }));
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V(vertexId)", new { value }));
             Assert.NotNull(coreStatement);
             Assert.AreEqual(1, coreStatement.QueryValues.Length);
             Assert.AreEqual("{\"value\":" + value + "}", coreStatement.QueryValues[0]);
         }
 
         [Test]
-        public void ExecuteGraph_Should_Allow_IpAddress_As_Parameters()
+        public async Task ExecuteGraph_Should_Allow_IpAddress_As_Parameters()
         {
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatement = stmt);
-            var session = _cluster.Connect();
+            _session = await ExecuteGraphTests.GetSession(stmt => coreStatement = stmt).ConfigureAwait(false);
             var value = IPAddress.Parse("192.168.1.100");
-            session.ExecuteGraph(new SimpleGraphStatement("g.V(vertexId)", new { value }));
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V(vertexId)", new { value }));
             Assert.NotNull(coreStatement);
             Assert.AreEqual(1, coreStatement.QueryValues.Length);
             Assert.AreEqual("{\"value\":\"" + value + "\"}", coreStatement.QueryValues[0]);
         }
 
         [Test]
-        public void Should_Make_Rpc_Call_When_Using_Analytics_Source()
+        public async Task Should_Make_Rpc_Call_When_Using_Analytics_Source()
         {
             var coreStatements = new List<SimpleStatement>();
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatements.Add(stmt), null, stmt =>
+            _session = await ExecuteGraphTests.GetSession(stmt => coreStatements.Add(stmt), null, stmt =>
             {
                 if (stmt is SimpleStatement st && st.QueryString.StartsWith("CALL "))
                 {
@@ -292,9 +278,8 @@ namespace Cassandra.Tests.DataStax.Graph
                     return mock.Object;
                 }
                 return new RowSet();
-            });
-            var session = _cluster.Connect();
-            session.ExecuteGraph(new SimpleGraphStatement("g.V()").SetGraphSourceAnalytics());
+            }).ConfigureAwait(false);
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V()").SetGraphSourceAnalytics());
             Assert.AreEqual(2, coreStatements.Count);
             Assert.AreEqual("CALL DseClientTool.getAnalyticsGraphServer()", coreStatements[0].QueryString);
             Assert.AreEqual("g.V()", coreStatements[1].QueryString);
@@ -305,12 +290,11 @@ namespace Cassandra.Tests.DataStax.Graph
         }
 
         [Test]
-        public void Should_Not_Make_Rpc_Calls_When_Using_Other_Sources()
+        public async Task Should_Not_Make_Rpc_Calls_When_Using_Other_Sources()
         {
             var coreStatements = new List<SimpleStatement>();
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatements.Add(stmt));
-            var session = _cluster.Connect();
-            session.ExecuteGraph(new SimpleGraphStatement("g.V()"));
+            _session = await ExecuteGraphTests.GetSession(stmt => coreStatements.Add(stmt)).ConfigureAwait(false);
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V()"));
             Assert.AreEqual(1, coreStatements.Count);
             Assert.AreEqual("g.V()", coreStatements[0].QueryString);
             var targettedStatement = coreStatements[0] as TargettedSimpleStatement;
@@ -319,12 +303,13 @@ namespace Cassandra.Tests.DataStax.Graph
         }
 
         [Test]
-        public void Should_Identity_Timeout_Infinite_ReadTimeout()
+        public async Task Should_Identity_Timeout_Infinite_ReadTimeout()
         {
             SimpleStatement coreStatement = null;
-            _cluster = ExecuteGraphTests.GetCluster(stmt => coreStatement = stmt, new GraphOptions().SetReadTimeoutMillis(32000));
-            var session = _cluster.Connect();
-            session.ExecuteGraph(new SimpleGraphStatement("g.V()")
+            _session = 
+                await ExecuteGraphTests.GetSession(stmt => coreStatement = stmt, new GraphOptions().SetReadTimeoutMillis(32000))
+                                              .ConfigureAwait(false);
+            _session.ExecuteGraph(new SimpleGraphStatement("g.V()")
                 .SetReadTimeoutMillis(Timeout.Infinite));
             Assert.NotNull(coreStatement);
             Assert.NotNull(coreStatement.OutgoingPayload);
@@ -336,10 +321,9 @@ namespace Cassandra.Tests.DataStax.Graph
         public async Task Should_Consider_Bulk_In_Gremlin_Response_With_GraphSON1()
         {
             var rs = ExecuteGraphTests.GetRowSet(ExecuteGraphTests.GetGremlin(1, 1), ExecuteGraphTests.GetGremlin(2, 2), ExecuteGraphTests.GetGremlin(3, 3), ExecuteGraphTests.GetGremlin(4));
-            _cluster = ExecuteGraphTests.GetCluster(stmt => { }, null, rs);
-            var session = _cluster.Connect();
+            _session = await ExecuteGraphTests.GetSession(stmt => { }, null, rs).ConfigureAwait(false);
             var graphStatement = new SimpleGraphStatement("g.V()").SetGraphLanguage(GraphOptions.DefaultLanguage);
-            var result = await session.ExecuteGraphAsync(graphStatement).ConfigureAwait(false);
+            var result = await _session.ExecuteGraphAsync(graphStatement).ConfigureAwait(false);
             Assert.That(result.To<int>(), Is.EquivalentTo(new[] { 1, 2, 2, 3, 3, 3, 4 }));
         }
 
@@ -350,10 +334,9 @@ namespace Cassandra.Tests.DataStax.Graph
                                ExecuteGraphTests.GetGremlin(2, "{\"@type\": \"g:Int64\", \"@value\": 2}"),
                                ExecuteGraphTests.GetGremlin(3, "{\"@type\": \"g:Int64\", \"@value\": 3}"),
                                ExecuteGraphTests.GetGremlin(10, "{\"@type\": \"g:Int64\", \"@value\": 1}"));
-            _cluster = ExecuteGraphTests.GetCluster(stmt => { }, null, rs);
-            var session = _cluster.Connect();
+            _session = await ExecuteGraphTests.GetSession(stmt => { }, null, rs).ConfigureAwait(false);
             var graphStatement = new SimpleGraphStatement("g.V()").SetGraphLanguage(GraphOptions.GraphSON2Language);
-            var result = await session.ExecuteGraphAsync(graphStatement).ConfigureAwait(false);
+            var result = await _session.ExecuteGraphAsync(graphStatement).ConfigureAwait(false);
             Assert.That(result.To<int>(), Is.EquivalentTo(new[] { 1, 2, 2, 3, 3, 3, 10 }));
         }
 
@@ -362,13 +345,13 @@ namespace Cassandra.Tests.DataStax.Graph
             return Serialization.TypeSerializer.PrimitiveLongSerializer.Serialize(4, value);
         }
 
-        private static ICluster GetCluster(
+        private static Task<ISession> GetSession(
             Action<SimpleStatement> executeCallback, GraphOptions graphOptions = null, RowSet rs = null)
         {
-            return ExecuteGraphTests.GetCluster(executeCallback, graphOptions, stmt => rs ?? new RowSet());
+            return ExecuteGraphTests.GetSession(executeCallback, graphOptions, stmt => rs ?? new RowSet());
         }
         
-        private static ICluster GetCluster(
+        private static async Task<ISession> GetSession(
             Action<SimpleStatement> executeCallback, GraphOptions graphOptions, Func<IStatement, RowSet> rs)
         {
             var config = new TestConfigurationBuilder
@@ -380,7 +363,7 @@ namespace Cassandra.Tests.DataStax.Graph
                 RequestHandlerFactory = new FakeRequestHandlerFactory(stmt => executeCallback((SimpleStatement)stmt), rs)
             }.Build();
 
-            return Cluster.BuildFrom(
+            return await Session.BuildFromAsync(
                 new FakeInitializer(
                     config, 
                     new List<IPEndPoint>
@@ -388,7 +371,7 @@ namespace Cassandra.Tests.DataStax.Graph
                         new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9042),
                         new IPEndPoint(IPAddress.Parse("1.2.3.4"), 9042)
                     }), 
-                new List<string>());
+                new List<string>()).ConfigureAwait(false);
         }
 
         private static RowSet GetRowSet(params string[] gremlin)

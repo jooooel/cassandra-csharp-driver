@@ -52,9 +52,8 @@ namespace Cassandra.Tests
             Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Info;
             var listener = new TestTraceListener();
             Trace.Listeners.Add(listener);
-            var builder = Cluster.Builder().AddContactPoint(TestHelper.UnreachableHostAddress).Build();
             // No host available
-            Assert.Throws<NoHostAvailableException>(() => builder.Connect());
+            Assert.Throws<NoHostAvailableException>(() => Session.Builder().AddContactPoint(TestHelper.UnreachableHostAddress).Build());
 
             // The name and version should be logged
             var message = listener.Messages.Values.First(m => m.Contains("Connecting to cluster using"));

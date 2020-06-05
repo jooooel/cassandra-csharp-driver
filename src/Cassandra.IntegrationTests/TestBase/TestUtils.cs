@@ -117,7 +117,7 @@ namespace Cassandra.IntegrationTests.TestBase
 
         public static Builder NewBuilder()
         {
-            var builder = Cluster.Builder().WithLocalDatacenter("dc1");
+            var builder = Session.Builder().WithLocalDatacenter("dc1");
             if (TestClusterManager.CcmUseWsl)
             {
                 builder = builder.WithSocketOptions(new SocketOptions().SetConnectTimeoutMillis(20000));
@@ -187,7 +187,7 @@ namespace Cassandra.IntegrationTests.TestBase
             throw new Exception("Could not connect to node: " + nodeHost + ":" + nodePort + " after " + maxSecondsToKeepTrying + " seconds!");
         }
 
-        private static void WaitForMeta(string nodeHost, Cluster cluster, int maxTry, bool waitForUp)
+        private static void WaitForMeta(string nodeHost, Session session, int maxTry, bool waitForUp)
         {
             string expectedFinalNodeState = "UP";
             if (!waitForUp)
@@ -197,7 +197,7 @@ namespace Cassandra.IntegrationTests.TestBase
                 try
                 {
                     // Are all nodes in the cluster accounted for?
-                    bool disconnected = !cluster.RefreshSchema();
+                    bool disconnected = !session.RefreshSchema();
                     if (disconnected)
                     {
                         string warnStr = "While waiting for host " + nodeHost + " to be " + expectedFinalNodeState + ", the cluster is now totally down, returning now ... ";
@@ -205,7 +205,7 @@ namespace Cassandra.IntegrationTests.TestBase
                         return;
                     }
 
-                    Metadata metadata = cluster.Metadata;
+                    Metadata metadata = session.Metadata;
                     foreach (Host host in metadata.AllHosts())
                     {
                         bool hostFound = false;
@@ -248,24 +248,24 @@ namespace Cassandra.IntegrationTests.TestBase
             Trace.TraceError(errStr);
         }
 
-        public static void WaitFor(string node, Cluster cluster, int maxTry)
+        public static void WaitFor(string node, Session session, int maxTry)
         {
-            TestUtils.WaitFor(node, cluster, maxTry, false, false);
+            TestUtils.WaitFor(node, session, maxTry, false, false);
         }
 
-        public static void WaitForDown(string node, Cluster cluster, int maxTry)
+        public static void WaitForDown(string node, Session session, int maxTry)
         {
-            TestUtils.WaitFor(node, cluster, maxTry, true, false);
+            TestUtils.WaitFor(node, session, maxTry, true, false);
         }
 
-        public static void waitForDecommission(string node, Cluster cluster, int maxTry)
+        public static void waitForDecommission(string node, Session session, int maxTry)
         {
-            TestUtils.WaitFor(node, cluster, maxTry, true, true);
+            TestUtils.WaitFor(node, session, maxTry, true, true);
         }
 
-        public static void WaitForDownWithWait(String node, Cluster cluster, int waitTime)
+        public static void WaitForDownWithWait(String node, Session session, int waitTime)
         {
-            TestUtils.WaitFor(node, cluster, 90, true, false);
+            TestUtils.WaitFor(node, session, 90, true, false);
 
             // FIXME: Once stop() works, remove this line
             try
@@ -278,9 +278,9 @@ namespace Cassandra.IntegrationTests.TestBase
             }
         }
 
-        private static void WaitFor(string node, Cluster cluster, int maxTry, bool waitForDead, bool waitForOut)
+        private static void WaitFor(string node, Session session, int maxTry, bool waitForDead, bool waitForOut)
         {
-            TestUtils.WaitForMeta(node, cluster, maxTry, !waitForDead); 
+            TestUtils.WaitForMeta(node, session, maxTry, !waitForDead); 
         }
 
         /// <summary>
@@ -619,16 +619,16 @@ namespace Cassandra.IntegrationTests.TestBase
         }
         
         public static void WaitForSchemaAgreement(
-            ICluster cluster, bool ignoreDownNodes = true, bool throwOnMaxRetries = false, int maxRetries = 20)
+            ISession session, bool ignoreDownNodes = true, bool throwOnMaxRetries = false, int maxRetries = 20)
         {
-            var hostsLength = cluster.AllHosts().Count;
+            var hostsLength = session.AllHosts().Count;
             if (hostsLength == 1)
             {
                 return;
             }
-            var cc = cluster.Metadata.ControlConnection;
+            var cc = session.Metadata.ControlConnection;
             var counter = 0;
-            var nodesDown = ignoreDownNodes ? cluster.AllHosts().Count(h => !h.IsConsiderablyUp) : 0;
+            var nodesDown = ignoreDownNodes ? session.AllHosts().Count(h => !h.IsConsiderablyUp) : 0;
             while (counter++ < maxRetries)
             {
                 Trace.TraceInformation("Waiting for test schema agreement");
@@ -655,17 +655,16 @@ namespace Cassandra.IntegrationTests.TestBase
 
         public static void WaitForSchemaAgreement(CcmClusterInfo clusterInfo)
         {
-            TestUtils.WaitForSchemaAgreement(clusterInfo.Cluster);
+            TestUtils.WaitForSchemaAgreement(clusterInfo.Session);
         }
 
         public static void VerifyCurrentClusterWorkloads(string[] expectedWorkloads)
         {
-            using (var cluster = TestUtils.NewBuilder()
+            using (var session = TestUtils.NewBuilder()
                 .AddContactPoint(TestClusterManager.InitialContactPoint)
                 .Build())
             {
-                cluster.Connect();
-                foreach (var host in cluster.Metadata.AllHosts())
+                foreach (var host in session.Metadata.AllHosts())
                 {
 
                     CollectionAssert.AreEquivalent(expectedWorkloads, host.Workloads);
@@ -706,8 +705,6 @@ namespace Cassandra.IntegrationTests.TestBase
 
     public class CcmClusterInfo
     {
-        public Cluster Cluster { get; set; }
-
         public ISession Session { get; set; }
 
         public string ConfigDir { get; set; }

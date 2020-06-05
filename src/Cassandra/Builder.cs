@@ -29,6 +29,7 @@ using Cassandra.ExecutionProfiles;
 using Cassandra.Metrics;
 using Cassandra.Metrics.Abstractions;
 using Cassandra.Serialization;
+using Cassandra.SessionManagement;
 using Cassandra.Tasks;
 
 namespace Cassandra
@@ -1214,7 +1215,17 @@ namespace Cassandra
         /// <exception cref="NoHostAvailableException">Throws a NoHostAvailableException when no host could be resolved.</exception>
         /// <exception cref="ArgumentException">Throws an ArgumentException when no contact point was provided.</exception>
         /// <returns>the newly build Session instance. </returns>
-        public Task<ISession> BuildAsync()
+        public async Task<ISession> BuildAsync()
+        {
+            return await BuildInternalAsync().ConfigureAwait(false);
+        }
+        
+        internal IInternalSession BuildInternal()
+        {
+            return TaskHelper.WaitToComplete(BuildInternalAsync());
+        }
+
+        internal Task<IInternalSession> BuildInternalAsync()
         {
             // call GetConfiguration first in case it's a cloud cluster and this will set the contact points
             var config = GetConfiguration();

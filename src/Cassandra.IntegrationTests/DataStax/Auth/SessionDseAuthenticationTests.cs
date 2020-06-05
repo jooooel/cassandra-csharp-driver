@@ -32,25 +32,23 @@ namespace Cassandra.IntegrationTests.DataStax.Auth
     public class SessionDseAuthenticationTests : TestGlobals
     {
         private Lazy<ITestCluster> _testClusterForDseAuthTesting;
-        private ICluster _cluster;
+        private ISession _session;
 
         public void RetryUntilClusterAuthHealthy(ITestCluster cluster)
         {
-            using (var c = ClusterBuilder()
-                           .AddContactPoint(cluster.InitialContactPoint)
-                           .WithAuthProvider(new PlainTextAuthProvider("wrong_username", "password"))
-                           .WithSocketOptions(new SocketOptions().SetReadTimeoutMillis(22000).SetConnectTimeoutMillis(60000))
-                           .Build())
-            {
-                TestHelper.RetryAssert(
-                    () =>
-                    {
-                        var ex = Assert.Throws<NoHostAvailableException>(() => c.Connect());
-                        Assert.IsInstanceOf<AuthenticationException>(ex.Errors.First().Value);
-                    },
-                    500,
-                    300);
-            }
+            TestHelper.RetryAssert(
+                () =>
+                {
+                    var ex = Assert.Throws<NoHostAvailableException>(
+                        () => SessionBuilder()
+                              .AddContactPoint(cluster.InitialContactPoint)
+                              .WithAuthProvider(new PlainTextAuthProvider("wrong_username", "password"))
+                              .WithSocketOptions(new SocketOptions().SetReadTimeoutMillis(22000).SetConnectTimeoutMillis(60000))
+                              .Build());
+                    Assert.IsInstanceOf<AuthenticationException>(ex.Errors.First().Value);
+                },
+                500,
+                300);
         }
 
         [OneTimeSetUp]
@@ -70,8 +68,8 @@ namespace Cassandra.IntegrationTests.DataStax.Auth
         [TearDown]
         public void TearDown()
         {
-            _cluster?.Dispose();
-            _cluster = null;
+            _session?.Dispose();
+            _session = null;
         }
 
         [OneTimeTearDown]
@@ -97,43 +95,38 @@ namespace Cassandra.IntegrationTests.DataStax.Auth
         [Test, TestDseVersion(5, 0)]
         public void StandardCreds_DseAuth_AuthSuccess()
         {
-            var builder = ClusterBuilder()
+            var builder = SessionBuilder()
                 .AddContactPoint(_testClusterForDseAuthTesting.Value.InitialContactPoint)
                 .WithCredentials("cassandra", "cassandra");
-            _cluster = builder.Build();
+            _session = builder.Build();
 
-            var session = _cluster.Connect();
-            var rs = session.Execute("SELECT * FROM system.local");
+            var rs = _session.Execute("SELECT * FROM system.local");
             Assert.Greater(rs.Count(), 0);
         }
 
         [Test, TestDseVersion(5, 0)]
         public void StandardCreds_DseAuth_AuthFail()
         {
-            using (var cluster = ClusterBuilder()
-                                 .AddContactPoint(_testClusterForDseAuthTesting.Value.InitialContactPoint)
-                                 .WithCredentials("wrong_username", "password")
-                                 .Build())
-            {
-                var ex = Assert.Throws<NoHostAvailableException>(() => cluster.Connect());
-                Assert.AreEqual(1, ex.Errors.Count);
-                Assert.IsTrue(ex.Message.Contains("Failed to login. Please re-try."), ex.Message);
-                Assert.IsInstanceOf<AuthenticationException>(ex.Errors.First().Value);
-            }
+            var ex = Assert.Throws<NoHostAvailableException>(
+                () => SessionBuilder()
+                      .AddContactPoint(_testClusterForDseAuthTesting.Value.InitialContactPoint)
+                      .WithCredentials("wrong_username", "password")
+                      .Build());
+            Assert.AreEqual(1, ex.Errors.Count);
+            Assert.IsTrue(ex.Message.Contains("Failed to login. Please re-try."), ex.Message);
+            Assert.IsInstanceOf<AuthenticationException>(ex.Errors.First().Value);
         }
 
         [Test, TestDseVersion(5, 0)]
         public void StandardCreds_DseAuth_AuthOmitted()
         {
-            using (var cluster = ClusterBuilder()
-                                 .AddContactPoint(_testClusterForDseAuthTesting.Value.InitialContactPoint)
-                                 .Build())
-            {
-                var ex = Assert.Throws<NoHostAvailableException>(() => cluster.Connect());
-                Assert.AreEqual(1, ex.Errors.Count);
-                Assert.IsTrue(ex.Message.Contains("requires authentication, but no authenticator found in Cluster configuration"));
-                Assert.IsInstanceOf<AuthenticationException>(ex.Errors.First().Value);
-            }
+            var ex = Assert.Throws<NoHostAvailableException>(
+                () => SessionBuilder()
+                      .AddContactPoint(_testClusterForDseAuthTesting.Value.InitialContactPoint)
+                      .Build());
+            Assert.AreEqual(1, ex.Errors.Count);
+            Assert.IsTrue(ex.Message.Contains("requires authentication, but no authenticator found in Cluster configuration"));
+            Assert.IsInstanceOf<AuthenticationException>(ex.Errors.First().Value);
         }
     }
 }

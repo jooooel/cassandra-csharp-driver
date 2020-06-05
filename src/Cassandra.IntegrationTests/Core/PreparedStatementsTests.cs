@@ -163,8 +163,8 @@ namespace Cassandra.IntegrationTests.Core
         {
             byte[] originalResultMetadataId = null;
             // Use 2 different clusters as the prepared statement cache should be different
-            using (var cluster1 = ClusterBuilder().AddContactPoint(TestClusterManager.InitialContactPoint).Build())
-            using (var cluster2 = ClusterBuilder().AddContactPoint(TestClusterManager.InitialContactPoint).Build())
+            using (var cluster1 = SessionBuilder().AddContactPoint(TestClusterManager.InitialContactPoint).Build())
+            using (var cluster2 = SessionBuilder().AddContactPoint(TestClusterManager.InitialContactPoint).Build())
             {
                 var session1 = cluster1.Connect();
                 var session2 = cluster2.Connect();
@@ -693,7 +693,7 @@ namespace Cassandra.IntegrationTests.Core
         [Test, TestTimeout(180000)]
         public void Bound_With_ChangingKeyspace()
         {
-            using (var localCluster = ClusterBuilder()
+            using (var localCluster = SessionBuilder()
                 .WithSocketOptions(new SocketOptions().SetConnectTimeoutMillis(15000))
                 .AddContactPoint(TestCluster.InitialContactPoint)
                 .Build())
@@ -894,7 +894,7 @@ namespace Cassandra.IntegrationTests.Core
 
         private void TestKeyspaceInPrepareNotSupported(bool specifyProtocol)
         {
-            var builder = ClusterBuilder().AddContactPoint(TestClusterManager.InitialContactPoint);
+            var builder = SessionBuilder().AddContactPoint(TestClusterManager.InitialContactPoint);
             if (specifyProtocol)
             {
                 builder.WithMaxProtocolVersion(ProtocolVersion.V4);
@@ -1020,7 +1020,7 @@ namespace Cassandra.IntegrationTests.Core
             CreateTable("tbl_unprepared_flow");
 
             // Use a dedicated cluster and table
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                         .AddContactPoint(TestCluster.InitialContactPoint)
                                         .WithQueryOptions(new QueryOptions().SetPrepareOnAllHosts(false)).Build())
             {
@@ -1075,7 +1075,7 @@ namespace Cassandra.IntegrationTests.Core
         [TestCassandraVersion(4, 0)]
         public void BatchStatement_With_Keyspace_Defined_On_Protocol_Greater_Than_4()
         {
-            using (var cluster = ClusterBuilder().AddContactPoint(TestClusterManager.InitialContactPoint).Build())
+            using (var cluster = SessionBuilder().AddContactPoint(TestClusterManager.InitialContactPoint).Build())
             {
                 var session = cluster.Connect("system");
                 var value = new Random().Next();
@@ -1096,7 +1096,7 @@ namespace Cassandra.IntegrationTests.Core
         [TestCassandraVersion(4, 0, Comparison.LessThan)]
         public void BatchStatement_With_Keyspace_Defined_On_Lower_Protocol_Versions()
         {
-            using (var cluster = ClusterBuilder().AddContactPoint(TestClusterManager.InitialContactPoint).Build())
+            using (var cluster = SessionBuilder().AddContactPoint(TestClusterManager.InitialContactPoint).Build())
             {
                 var session = cluster.Connect("system");
                 var query = new SimpleStatement(
@@ -1118,7 +1118,7 @@ namespace Cassandra.IntegrationTests.Core
         {
             var tableName = TestUtils.GetUniqueTableName();
             using (var cluster = 
-                ClusterBuilder()
+                SessionBuilder()
                        .AddContactPoint(TestClusterManager.InitialContactPoint)
                        .WithQueryTimeout(500000).Build())
             {

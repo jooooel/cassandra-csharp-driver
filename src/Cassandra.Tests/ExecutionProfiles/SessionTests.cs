@@ -39,7 +39,6 @@ namespace Cassandra.Tests.ExecutionProfiles
             var requestHandlerFactoryMock = Mock.Of<IRequestHandlerFactory>();
             var requestHandlerMock = Mock.Of<IRequestHandler>();
             var hostConnectionPoolFactoryMock = Mock.Of<IHostConnectionPoolFactory>();
-            var clusterMock = Mock.Of<IInternalCluster>();
             var serializer = SerializerManager.Default;
             var config = new TestConfigurationBuilder
             {
@@ -55,10 +54,9 @@ namespace Cassandra.Tests.ExecutionProfiles
                 QueryOptions = new QueryOptions().SetConsistencyLevel(ConsistencyLevel.LocalSerial),
                 SocketOptions = new SocketOptions().SetReadTimeoutMillis(60000)
             }.Build();
-            Mock.Get(clusterMock).Setup(c => c.Configuration).Returns(config);
             Mock.Get(requestHandlerMock).Setup(r => r.SendAsync()).Returns(Task.FromResult(new RowSet()));
 
-            var session = new Session(clusterMock, config, null, serializer, null);
+            var session = new Session(new object[0], config, null);
 
             Mock.Get(requestHandlerFactoryMock)
                 .Setup(m => m.Create(session, serializer.GetCurrentSerializer(), It.IsAny<IStatement>(), config.RequestOptions["testE"]))
@@ -84,7 +82,6 @@ namespace Cassandra.Tests.ExecutionProfiles
             var requestHandlerFactoryMock = Mock.Of<IRequestHandlerFactory>();
             var requestHandlerMock = Mock.Of<IRequestHandler>();
             var hostConnectionPoolFactoryMock = Mock.Of<IHostConnectionPoolFactory>();
-            var clusterMock = Mock.Of<IInternalCluster>();
             var serializer = SerializerManager.Default;
             var config = new TestConfigurationBuilder
             {
@@ -101,10 +98,9 @@ namespace Cassandra.Tests.ExecutionProfiles
                 QueryOptions = new QueryOptions().SetConsistencyLevel(ConsistencyLevel.LocalSerial),
                 SocketOptions = new SocketOptions().SetReadTimeoutMillis(60000)
             }.Build();
-            Mock.Get(clusterMock).Setup(c => c.Configuration).Returns(config);
             Mock.Get(requestHandlerMock).Setup(r => r.SendAsync()).Returns(Task.FromResult(new RowSet()));
-
-            var session = new Session(clusterMock, config, null, serializer, null);
+            
+            var session = new Session(new object[0], config, null);
 
             Mock.Get(requestHandlerFactoryMock)
                 .Setup(m => m.Create(session, serializer.GetCurrentSerializer(), It.IsAny<IStatement>(), config.DefaultRequestOptions))

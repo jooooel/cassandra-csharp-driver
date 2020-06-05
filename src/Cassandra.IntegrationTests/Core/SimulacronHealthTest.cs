@@ -34,7 +34,7 @@ namespace Cassandra.IntegrationTests.Core
             const string query = "SELECT * FROM system.traces";
             var simulacronCluster = SimulacronCluster.CreateNew(new SimulacronOptions { Nodes = "3" });
             var contactPoint = simulacronCluster.InitialContactPoint;
-            var builder = ClusterBuilder()
+            var builder = SessionBuilder()
                                  .AddContactPoint(contactPoint);
             using (var cluster = builder.Build())
             {

@@ -25,12 +25,12 @@ namespace Cassandra.IntegrationTests
     /// <summary>
     /// Represents a test fixture that on setup, it creates a test cluster available for all tests.
     /// <para>
-    /// With a shared session and cluster.
+    /// With a shared session.
     /// </para>
     /// </summary>
     public abstract class SharedClusterTest : TestGlobals
     {
-        protected readonly List<ICluster> ClusterInstances = new List<ICluster>();
+        protected readonly List<ISession> SessionInstances = new List<ISession>();
 
         /// <summary>
         /// Gets the amount of nodes in the test cluster
@@ -46,12 +46,7 @@ namespace Cassandra.IntegrationTests
         /// Gets the Cassandra cluster that is used for testing
         /// </summary>
         protected ITestCluster TestCluster { get; private set; }
-
-        /// <summary>
-        /// The shared cluster instance of the fixture
-        /// </summary>
-        protected Cluster Cluster { get; set; }
-
+        
         /// <summary>
         /// The shared Session instance of the fixture
         /// </summary>
@@ -103,11 +98,10 @@ namespace Cassandra.IntegrationTests
         
         protected virtual void CreateCommonSession()
         {
-            var builder = ClusterBuilder().AddContactPoint(TestCluster.InitialContactPoint)
+            var builder = SessionBuilder().AddContactPoint(TestCluster.InitialContactPoint)
                                           .WithQueryTimeout(60000)
                                           .WithSocketOptions(new SocketOptions().SetConnectTimeoutMillis(30000).SetReadTimeoutMillis(22000));
-            Cluster = builder.Build();
-            Session = (Session)Cluster.Connect();
+            Session = builder.BuildInternal();
             Session.CreateKeyspace(KeyspaceName, null, false);
             Session.ChangeKeyspace(KeyspaceName);
         }
@@ -123,50 +117,43 @@ namespace Cassandra.IntegrationTests
         [OneTimeTearDown]
         public virtual void OneTimeTearDown()
         {
-            if (Cluster != null)
-            {
-                Cluster.Shutdown(TestClusterManager.Executor.GetDefaultTimeout());
-            }
+            Session?.Shutdown(TestClusterManager.Executor.GetDefaultTimeout());
             //Shutdown the other instances created by helper methods
-            foreach (var c in ClusterInstances)
+            foreach (var s in SessionInstances)
             {
-                c.Shutdown(TestClusterManager.Executor.GetDefaultTimeout());
+                s.Shutdown(TestClusterManager.Executor.GetDefaultTimeout());
             }
-            ClusterInstances.Clear();
-        }
-        
-        protected ISession GetNewTemporarySession(string keyspace = null)
-        {
-            return GetNewTemporaryCluster().Connect(keyspace);
+            SessionInstances.Clear();
         }
         
         [TearDown]
         public virtual void TearDown()
         {
-            foreach (var c in ClusterInstances)
+            foreach (var s in SessionInstances)
             {
                 try
                 {
-                    c.Dispose();
+                    s.Dispose();
                 }
                 catch
                 {
                     // ignored
                 }
             }
-            ClusterInstances.Clear();
+
+            SessionInstances.Clear();
         }
 
-        protected virtual ICluster GetNewTemporaryCluster(Action<Builder> build = null)
+        protected virtual ISession GetNewTemporarySession(Action<Builder> build = null)
         {
             var builder = 
-                ClusterBuilder()
+                SessionBuilder()
                          .AddContactPoint(TestCluster.InitialContactPoint)
                          .WithSocketOptions(new SocketOptions().SetConnectTimeoutMillis(30000).SetReadTimeoutMillis(22000));
             build?.Invoke(builder);
-            var cluster = builder.Build();
-            ClusterInstances.Add(cluster);
-            return cluster;
+            var session = builder.Build();
+            SessionInstances.Add(session);
+            return session;
         }
 
         protected void SetBaseSession(ISession session)

@@ -48,7 +48,7 @@ namespace Cassandra.IntegrationTests.DataStax.Auth
                 JvmArgs = new[] { "-Dcassandra.superuser_setup_delay_ms=0" }
             });
             var authProvider = new DsePlainTextAuthProvider("cassandra", "cassandra");
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                 .AddContactPoint(_testCluster.InitialContactPoint)
                 .WithAuthProvider(authProvider)
                 .Build())
@@ -188,7 +188,7 @@ namespace Cassandra.IntegrationTests.DataStax.Auth
 
         private void ConnectAndQuery(IAuthProvider authProvider, string executeAs = null, string query = "SELECT * FROM aliceks.alicetable")
         {
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                 .AddContactPoint(_testCluster.InitialContactPoint)
                 .WithAuthProvider(authProvider)
                 .Build())
@@ -206,7 +206,7 @@ namespace Cassandra.IntegrationTests.DataStax.Auth
 
         private void ConnectAndBatchQuery(IAuthProvider authProvider, string executeAs = null)
         {
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                 .AddContactPoint(_testCluster.InitialContactPoint)
                 .WithAuthProvider(authProvider)
                 .Build())

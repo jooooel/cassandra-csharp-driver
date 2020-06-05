@@ -39,7 +39,7 @@ namespace Cassandra.Tests.Requests
             Assert.True(driverName.Contains("DataStax") && driverName.Contains("C# Driver"), driverName);
             Assert.AreEqual("3.0.0", options["CQL_VERSION"]);
 
-            var assemblyVersion = AssemblyHelpers.GetAssembly(typeof(Cluster)).GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+            var assemblyVersion = AssemblyHelpers.GetAssembly(typeof(Session)).GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
             Assert.AreEqual(assemblyVersion, options["DRIVER_VERSION"]);
             var indexOfVersionSuffix = assemblyVersion.IndexOf('-');
             var versionPrefix = indexOfVersionSuffix == -1 ? assemblyVersion : assemblyVersion.Substring(0, indexOfVersionSuffix);
@@ -73,7 +73,7 @@ namespace Cassandra.Tests.Requests
             Assert.True(driverName.Contains("DataStax") && driverName.Contains("C# Driver"), driverName);
             Assert.AreEqual("3.0.0", options["CQL_VERSION"]);
 
-            var assemblyVersion = AssemblyHelpers.GetAssembly(typeof(Cluster)).GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+            var assemblyVersion = AssemblyHelpers.GetAssembly(typeof(Session)).GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
             Assert.AreEqual(assemblyVersion, options["DRIVER_VERSION"]);
             var indexOfVersionSuffix = assemblyVersion.IndexOf('-');
             var versionPrefix = indexOfVersionSuffix == -1 ? assemblyVersion : assemblyVersion.Substring(0, indexOfVersionSuffix);

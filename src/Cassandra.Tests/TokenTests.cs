@@ -443,7 +443,7 @@ namespace Cassandra.Tests
             }.Build();
             var metadata = new Metadata(config, schemaParser) {Partitioner = "Murmur3Partitioner"};
             metadata.ControlConnection = new ControlConnection(
-                Mock.Of<IInternalCluster>(),
+                Mock.Of<IInternalSession>(),
                 new ProtocolEventDebouncer(new TaskBasedTimerFactory(), TimeSpan.FromMilliseconds(20), TimeSpan.FromSeconds(100)), 
                 ProtocolVersion.V3, 
                 config, 

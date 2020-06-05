@@ -47,14 +47,14 @@ namespace Cassandra.Tests.DataStax.Auth
         [Test]
         public void Should_CreatePlainTextAuthProvider_When_WithCredentialsIsCalled()
         {
-            var cluster = Cluster.Builder().AddContactPoint("127.0.0.1").WithCredentials("cassandra", "cassandra").Build();
+            var cluster = Session.Builder().AddContactPoint("127.0.0.1").WithCredentials("cassandra", "cassandra").Build();
             Assert.AreEqual(typeof(PlainTextAuthProvider), cluster.Configuration.AuthProvider.GetType());
         }
         
         [Test]
         public void Should_SetDsePlainTextAuthProvider_When_WithAuthProviderIsCalled()
         {
-            var cluster = Cluster.Builder().AddContactPoint("127.0.0.1").WithAuthProvider(new DsePlainTextAuthProvider("cassandra", "cassandra")).Build();
+            var cluster = Session.Builder().AddContactPoint("127.0.0.1").WithAuthProvider(new DsePlainTextAuthProvider("cassandra", "cassandra")).Build();
             Assert.AreEqual(typeof(DsePlainTextAuthProvider), cluster.Configuration.AuthProvider.GetType());
         }
     }

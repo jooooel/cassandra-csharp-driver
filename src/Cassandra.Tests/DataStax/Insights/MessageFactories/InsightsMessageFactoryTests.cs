@@ -39,7 +39,7 @@ namespace Cassandra.Tests.DataStax.Insights.MessageFactories
             var target = Configuration.DefaultInsightsStartupMessageFactory;
             var timestamp = (long)(DateTimeOffset.UtcNow - new DateTimeOffset(1970, 1, 1, 0, 0, 0, 0, TimeSpan.Zero)).TotalMilliseconds;
 
-            var act = target.CreateMessage(cluster, Mock.Of<IInternalSession>());
+            var act = target.CreateMessage(Mock.Of<IInternalSession>());
 
             Assert.AreEqual(InsightType.Event, act.Metadata.InsightType);
             Assert.AreEqual("v1", act.Metadata.InsightMappingId);
@@ -56,7 +56,7 @@ namespace Cassandra.Tests.DataStax.Insights.MessageFactories
             var target = Configuration.DefaultInsightsStatusMessageFactory;
             var timestamp = (long)(DateTimeOffset.UtcNow - new DateTimeOffset(1970, 1, 1, 0, 0, 0, 0, TimeSpan.Zero)).TotalMilliseconds;
 
-            var act = target.CreateMessage(cluster, Mock.Of<IInternalSession>());
+            var act = target.CreateMessage(Mock.Of<IInternalSession>());
 
             Assert.AreEqual(InsightType.Event, act.Metadata.InsightType);
             Assert.AreEqual("v1", act.Metadata.InsightMappingId);
@@ -69,8 +69,7 @@ namespace Cassandra.Tests.DataStax.Insights.MessageFactories
         [Test]
         public void Should_ReturnCorrectData_When_CreateStatusMessageIsCalled()
         {
-            var cluster = GetCluster();
-            var session = Mock.Of<IInternalSession>();
+            var session = GetCluster();
             var mockPool1 = Mock.Of<IHostConnectionPool>();
             var mockPool2 = Mock.Of<IHostConnectionPool>();
             Mock.Get(mockPool1).SetupGet(m => m.InFlight).Returns(1);
@@ -84,14 +83,13 @@ namespace Cassandra.Tests.DataStax.Insights.MessageFactories
                 { host1, mockPool1 },
                 { host2, mockPool2 }
             };
-            Mock.Get(cluster).Setup(m => m.GetHost(host1)).Returns(new Host(host1, contactPoint: null));
-            Mock.Get(cluster).Setup(m => m.GetHost(host2)).Returns(new Host(host2, contactPoint: null));
+            Mock.Get(session).Setup(m => m.GetHost(host1)).Returns(new Host(host1, contactPoint: null));
+            Mock.Get(session).Setup(m => m.GetHost(host2)).Returns(new Host(host2, contactPoint: null));
             Mock.Get(session).Setup(s => s.GetPools()).Returns(pools.ToArray());
-            Mock.Get(session).Setup(m => m.Cluster).Returns(cluster);
             Mock.Get(session).SetupGet(m => m.InternalSessionId).Returns(Guid.Parse("E21EAB96-D91E-4790-80BD-1D5FB5472258"));
             var target = Configuration.DefaultInsightsStatusMessageFactory;
 
-            var act = target.CreateMessage(cluster, session);
+            var act = target.CreateMessage(session);
 
             Assert.AreEqual("127.0.0.1:9011", act.Data.ControlConnection);
             Assert.AreEqual("BECFE098-E462-47E7-B6A7-A21CD316D4C0", act.Data.ClientId.ToUpper());
@@ -106,12 +104,11 @@ namespace Cassandra.Tests.DataStax.Insights.MessageFactories
         [Test]
         public void Should_ReturnCorrectData_When_CreateStartupMessageIsCalled()
         {
-            var cluster = GetCluster();
+            var session = GetCluster();
             var target = Configuration.DefaultInsightsStartupMessageFactory;
 
-            var session = Mock.Of<IInternalSession>();
             Mock.Get(session).SetupGet(m => m.InternalSessionId).Returns(Guid.Parse("E21EAB96-D91E-4790-80BD-1D5FB5472258"));
-            var act = target.CreateMessage(cluster, session);
+            var act = target.CreateMessage(session);
 
             InsightsMessageFactoryTests.AssertStartupOptions(act);
 
@@ -223,9 +220,9 @@ namespace Cassandra.Tests.DataStax.Insights.MessageFactories
             Assert.AreEqual(1213, defaultProfile.SpeculativeExecution.Options["delay"]);
         }
 
-        private IInternalCluster GetCluster()
+        private IInternalSession GetCluster()
         {
-            var cluster = Mock.Of<IInternalCluster>();
+            var session = Mock.Of<IInternalSession>();
             var config = GetConfig();
             var metadata = new Metadata(config)
             {
@@ -249,10 +246,10 @@ namespace Cassandra.Tests.DataStax.Insights.MessageFactories
             });
             metadata.AddHost(hostIp);
             metadata.Hosts.ToCollection().First().Datacenter = "dc123";
-            Mock.Get(cluster).SetupGet(m => m.Configuration).Returns(config);
-            Mock.Get(cluster).SetupGet(m => m.Metadata).Returns(metadata);
-            Mock.Get(cluster).Setup(c => c.AllHosts()).Returns(metadata.AllHosts);
-            return cluster;
+            Mock.Get(session).SetupGet(m => m.Configuration).Returns(config);
+            Mock.Get(session).SetupGet(m => m.Metadata).Returns(metadata);
+            Mock.Get(session).Setup(c => c.AllHosts()).Returns(metadata.AllHosts);
+            return session;
         }
 
         private Configuration GetConfig()

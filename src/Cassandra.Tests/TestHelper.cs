@@ -728,10 +728,10 @@ namespace Cassandra.Tests
                 _childPolicy = new RoundRobinPolicy();
             }
 
-            public void Initialize(ICluster cluster)
+            public void Initialize(ISession session)
             {
-                _hosts = cluster.AllHosts();
-                _childPolicy.Initialize(cluster);
+                _hosts = session.AllHosts();
+                _childPolicy.Initialize(session);
             }
 
             public HostDistance Distance(Host host)
@@ -751,31 +751,31 @@ namespace Cassandra.Tests
         /// </summary>
         internal class CustomLoadBalancingPolicy : ILoadBalancingPolicy
         {
-            private ICluster _cluster;
-            private readonly Func<ICluster, Host, HostDistance> _distanceHandler;
-            private readonly Func<ICluster, string, IStatement, IEnumerable<Host>> _queryPlanHandler;
+            private ISession _session;
+            private readonly Func<ISession, Host, HostDistance> _distanceHandler;
+            private readonly Func<ISession, string, IStatement, IEnumerable<Host>> _queryPlanHandler;
 
             public CustomLoadBalancingPolicy(
-                Func<ICluster, string, IStatement, IEnumerable<Host>> queryPlanHandler = null,
-                Func<ICluster, Host, HostDistance> distanceHandler = null)
+                Func<ISession, string, IStatement, IEnumerable<Host>> queryPlanHandler = null,
+                Func<ISession, Host, HostDistance> distanceHandler = null)
             {
-                _queryPlanHandler = queryPlanHandler ?? ((cluster, ks, statement) => cluster.AllHosts());
+                _queryPlanHandler = queryPlanHandler ?? ((session, ks, statement) => session.AllHosts());
                 _distanceHandler = distanceHandler ?? ((_, __) => HostDistance.Local);
             }
 
-            public void Initialize(ICluster cluster)
+            public void Initialize(ISession session)
             {
-                _cluster = cluster;
+                _session = session;
             }
 
             public HostDistance Distance(Host host)
             {
-                return _distanceHandler(_cluster, host);
+                return _distanceHandler(_session, host);
             }
 
             public IEnumerable<Host> NewQueryPlan(string keyspace, IStatement query)
             {
-                return _queryPlanHandler(_cluster, keyspace, query);
+                return _queryPlanHandler(_session, keyspace, query);
             }
         }
     }

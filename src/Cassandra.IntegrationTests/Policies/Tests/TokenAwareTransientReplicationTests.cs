@@ -39,7 +39,7 @@ namespace Cassandra.IntegrationTests.Policies.Tests
         [Test]
         public void TokenAware_TransientReplication_NoHopsAndOnlyFullReplicas()
         {
-            var cluster = ClusterBuilder()
+            var cluster = SessionBuilder()
                                  .AddContactPoint(TestCluster.InitialContactPoint)
                                  .Build();
             try

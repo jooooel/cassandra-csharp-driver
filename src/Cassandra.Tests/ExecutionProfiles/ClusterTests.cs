@@ -17,6 +17,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Cassandra.ExecutionProfiles;
 using Cassandra.Tests.Connections.TestHelpers;
 using Moq;
@@ -28,7 +29,7 @@ namespace Cassandra.Tests.ExecutionProfiles
     public class ClusterTests
     {
         [Test]
-        public void Should_OnlyInitializePoliciesOnce_When_MultiplePoliciesAreProvidedWithExecutionProfiles()
+        public async Task Should_OnlyInitializePoliciesOnce_When_MultiplePoliciesAreProvidedWithExecutionProfiles()
         {
             var lbps = Enumerable.Range(1, 5).Select(i => new FakeLoadBalancingPolicy()).ToArray();
             var seps = Enumerable.Range(1, 5).Select(i => new FakeSpeculativeExecutionPolicy()).ToArray();
@@ -100,8 +101,9 @@ namespace Cassandra.Tests.ExecutionProfiles
                 .Setup(i => i.GetConfiguration())
                 .Returns(testConfig);
             
-            var cluster = Cluster.BuildFrom(initializerMock, new List<string>(), testConfig);
-            cluster.Connect();
+            var session = 
+                await Session.BuildFromAsync(initializerMock, new List<string>(), testConfig).ConfigureAwait(false);
+            await session.ShutdownAsync().ConfigureAwait(false);
             
             Assert.IsTrue(lbps.Skip(1).All(lbp => lbp.InitializeCount == 1));
             Assert.IsTrue(seps.Skip(1).All(sep => sep.InitializeCount == 1));
@@ -110,7 +112,7 @@ namespace Cassandra.Tests.ExecutionProfiles
         }
         
         [Test]
-        public void Should_OnlyInitializePoliciesOnce_When_NoProfileIsProvided()
+        public async Task Should_OnlyInitializePoliciesOnce_When_NoProfileIsProvided()
         {
             var lbp = new FakeLoadBalancingPolicy();
             var sep = new FakeSpeculativeExecutionPolicy();
@@ -133,15 +135,16 @@ namespace Cassandra.Tests.ExecutionProfiles
                 .Setup(i => i.GetConfiguration())
                 .Returns(testConfig);
             
-            var cluster = Cluster.BuildFrom(initializerMock, new List<string>(), testConfig);
-            cluster.Connect();
+            var session = 
+                await Session.BuildFromAsync(initializerMock, new List<string>(), testConfig).ConfigureAwait(false);
+            await session.ShutdownAsync().ConfigureAwait(false);
 
             Assert.AreEqual(1, lbp.InitializeCount);
             Assert.AreEqual(1, sep.InitializeCount);
         }
         
         [Test]
-        public void Should_OnlyDisposePoliciesOnce_When_MultiplePoliciesAreProvidedWithExecutionProfiles()
+        public async Task Should_OnlyDisposePoliciesOnce_When_MultiplePoliciesAreProvidedWithExecutionProfiles()
         {
             var lbps = Enumerable.Range(1, 2).Select(i => new FakeLoadBalancingPolicy()).ToArray();
             var seps = Enumerable.Range(1, 4).Select(i => new FakeSpeculativeExecutionPolicy()).ToArray();
@@ -203,16 +206,16 @@ namespace Cassandra.Tests.ExecutionProfiles
                 .Setup(i => i.GetConfiguration())
                 .Returns(testConfig);
             
-            var cluster = Cluster.BuildFrom(initializerMock, new List<string>(), testConfig);
-            cluster.Connect();
-            cluster.Dispose();
+            var session = 
+                await Session.BuildFromAsync(initializerMock, new List<string>(), testConfig).ConfigureAwait(false);
+            await session.ShutdownAsync().ConfigureAwait(false);
 
             Assert.IsTrue(seps.Skip(1).All(sep => sep.DisposeCount == 1));
             Assert.AreEqual(0, seps[0].DisposeCount);
         }
         
         [Test]
-        public void Should_OnlyDisposePoliciesOnce_When_NoProfileIsProvided()
+        public async Task Should_OnlyDisposePoliciesOnce_When_NoProfileIsProvided()
         {
             var lbp = new FakeLoadBalancingPolicy();
             var sep = new FakeSpeculativeExecutionPolicy();
@@ -235,15 +238,15 @@ namespace Cassandra.Tests.ExecutionProfiles
                 .Setup(i => i.GetConfiguration())
                 .Returns(testConfig);
             
-            var cluster = Cluster.BuildFrom(initializerMock, new List<string>(), testConfig);
-            cluster.Connect();
-            cluster.Dispose();
+            var session = 
+                await Session.BuildFromAsync(initializerMock, new List<string>(), testConfig).ConfigureAwait(false);
+            await session.ShutdownAsync().ConfigureAwait(false);
 
             Assert.AreEqual(1, sep.DisposeCount);
         }
         
         [Test]
-        public void Should_OnlyDisposeRelevantPolicies_When_PoliciesAreProvidedByDefaultProfile()
+        public async Task Should_OnlyDisposeRelevantPolicies_When_PoliciesAreProvidedByDefaultProfile()
         {
             var lbp1 = new FakeLoadBalancingPolicy();
             var sep1 = new FakeSpeculativeExecutionPolicy();
@@ -272,16 +275,15 @@ namespace Cassandra.Tests.ExecutionProfiles
                 .Setup(i => i.GetConfiguration())
                 .Returns(testConfig);
             
-            var cluster = Cluster.BuildFrom(initializerMock, new List<string>(), testConfig);
-            cluster.Connect();
-            cluster.Dispose();
+            var session = await Session.BuildFromAsync(initializerMock, new List<string>(), testConfig).ConfigureAwait(false);
+            await session.ShutdownAsync().ConfigureAwait(false);
 
             Assert.AreEqual(0, sep1.DisposeCount);
             Assert.AreEqual(1, sep2.DisposeCount);
         }
         
         [Test]
-        public void Should_OnlyInitializeRelevantPolicies_When_PoliciesAreProvidedByDefaultProfile()
+        public async Task Should_OnlyInitializeRelevantPolicies_When_PoliciesAreProvidedByDefaultProfile()
         {
             var lbp1 = new FakeLoadBalancingPolicy();
             var sep1 = new FakeSpeculativeExecutionPolicy();
@@ -309,10 +311,11 @@ namespace Cassandra.Tests.ExecutionProfiles
             Mock.Get(initializerMock)
                 .Setup(i => i.GetConfiguration())
                 .Returns(testConfig);
-            
-            var cluster = Cluster.BuildFrom(initializerMock, new List<string>(), testConfig);
-            cluster.Connect();
-            
+
+            var session = 
+                await Session.BuildFromAsync(initializerMock, new List<string>(), testConfig).ConfigureAwait(false);
+            await session.ShutdownAsync().ConfigureAwait(false);
+
             Assert.AreEqual(0, lbp1.InitializeCount);
             Assert.AreEqual(0, sep1.InitializeCount);
             Assert.AreEqual(1, lbp2.InitializeCount);
@@ -329,7 +332,7 @@ namespace Cassandra.Tests.ExecutionProfiles
                 DisposeCount++;
             }
 
-            public void Initialize(ICluster cluster)
+            public void Initialize(ISession session)
             {
                 InitializeCount++;
             }
@@ -343,11 +346,11 @@ namespace Cassandra.Tests.ExecutionProfiles
         internal class FakeLoadBalancingPolicy : ILoadBalancingPolicy
         {
             public volatile int InitializeCount;
-            private ICluster _cluster;
+            private ISession _session;
 
-            public void Initialize(ICluster cluster)
+            public void Initialize(ISession session)
             {
-                _cluster = cluster;
+                _session = session;
                 InitializeCount++;
             }
 
@@ -358,7 +361,7 @@ namespace Cassandra.Tests.ExecutionProfiles
 
             public IEnumerable<Host> NewQueryPlan(string keyspace, IStatement query)
             {
-                return _cluster.AllHosts();
+                return _session.AllHosts();
             }
         }
     }

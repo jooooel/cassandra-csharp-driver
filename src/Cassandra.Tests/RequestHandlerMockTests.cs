@@ -39,8 +39,6 @@ namespace Cassandra.Tests
         private static IInternalSession GetMockInternalSession()
         {
             var sessionMock = new Mock<IInternalSession>();
-            var clusterMock = new Mock<IInternalCluster>();
-            sessionMock.Setup(x => x.InternalCluster).Returns(clusterMock.Object);
             sessionMock.Setup(x => x.ObserverFactory)
                        .Returns(new MetricsObserverFactory(new MetricsManager(new NullDriverMetricsProvider(), new DriverMetricsOptions(), true, "s1")));
             return sessionMock.Object;
@@ -68,7 +66,7 @@ namespace Cassandra.Tests
         {
             var sessionMock = GetMockInternalSession();
             var lbpMock = Mock.Of<ILoadBalancingPolicy>();
-            Mock.Get(sessionMock).SetupGet(m => m.Cluster.Configuration).Returns(RequestHandlerMockTests.GetConfig(lbpMock));
+            Mock.Get(sessionMock).SetupGet(m => m.Configuration).Returns(RequestHandlerMockTests.GetConfig(lbpMock));
             var enumerable = Mock.Of<IEnumerable<Host>>();
             var enumerator = Mock.Of<IEnumerator<Host>>();
 
@@ -88,7 +86,7 @@ namespace Cassandra.Tests
         {
             var sessionMock = GetMockInternalSession();
             var lbpMock = Mock.Of<ILoadBalancingPolicy>();
-            Mock.Get(sessionMock).SetupGet(m => m.Cluster.Configuration).Returns(RequestHandlerMockTests.GetConfig(lbpMock));
+            Mock.Get(sessionMock).SetupGet(m => m.Configuration).Returns(RequestHandlerMockTests.GetConfig(lbpMock));
             var enumerable = Mock.Of<IEnumerable<Host>>();
             var enumerator = Mock.Of<IEnumerator<Host>>();
 
@@ -109,7 +107,7 @@ namespace Cassandra.Tests
         {
             var sessionMock = GetMockInternalSession();
             var lbpMock = Mock.Of<ILoadBalancingPolicy>();
-            Mock.Get(sessionMock).SetupGet(m => m.Cluster.Configuration).Returns(RequestHandlerMockTests.GetConfig(lbpMock));
+            Mock.Get(sessionMock).SetupGet(m => m.Configuration).Returns(RequestHandlerMockTests.GetConfig(lbpMock));
             var enumerable = Mock.Of<IEnumerable<Host>>();
             var enumerator = Mock.Of<IEnumerator<Host>>();
             var host = new Host(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9047), contactPoint: null);

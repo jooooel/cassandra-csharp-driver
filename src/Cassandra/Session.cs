@@ -247,22 +247,22 @@ namespace Cassandra
             }
             catch (InvalidQueryException)
             {
-                Session.Logger.Info(string.Format("Cannot DELETE keyspace:  {0}  because it not exists.", keyspaceName));
+                Session.Logger.Info($"Cannot DELETE keyspace:  {keyspaceName}  because it not exists.");
             }
         }
 
-        internal static Task<ISession> BuildFromAsync(IInitializer initializer)
+        internal static Task<IInternalSession> BuildFromAsync(IInitializer initializer)
         {
             return Session.BuildFromAsync(initializer, null, null);
         }
 
-        internal static Task<ISession> BuildFromAsync(
+        internal static Task<IInternalSession> BuildFromAsync(
             IInitializer initializer, IReadOnlyList<object> nonIpEndPointContactPoints)
         {
             return Session.BuildFromAsync(initializer, nonIpEndPointContactPoints, null);
         }
 
-        internal static async Task<ISession> BuildFromAsync(
+        internal static async Task<IInternalSession> BuildFromAsync(
             IInitializer initializer, 
             IReadOnlyList<object> nonIpEndPointContactPoints, 
             Configuration config)
@@ -274,9 +274,18 @@ namespace Cassandra
                 initializer.ContactPoints.Concat(nonIpEndPointContactPoints),
                 config,
                 newSessionName).ConfigureAwait(false);
-            
-            await s.Init().ConfigureAwait(false);
-            return s;
+
+            try
+            {
+                await s.Init().ConfigureAwait(false);
+                return s;
+
+            }
+            catch (Exception)
+            {
+                await s.ShutdownAsync().ConfigureAwait(false);
+                throw;
+            }
         }
 
         private static string GetNewSessionName(Configuration config)
@@ -306,16 +315,15 @@ namespace Cassandra
         {
             return new Builder();
         }
-
-        /// <inheritdoc />
-        public void Dispose()
-        {
-            ShutdownAsync().GetAwaiter().GetResult();
-        }
         
         /// <inheritdoc />
         public async Task ShutdownAsync()
         {
+            if (!_initialized)
+            {
+                return;
+            }
+
             //Only dispose once
             if (Interlocked.Increment(ref _disposed) != 1)
             {
@@ -336,8 +344,39 @@ namespace Cassandra
             {
                 pool.Value.Dispose();
             }
+
+            _controlConnection.Dispose();
+            await _protocolEventDebouncer.ShutdownAsync().ConfigureAwait(false);
+            Configuration.Timer.Dispose();
+
+            // Dispose policies
+            var speculativeExecutionPolicies = new HashSet<ISpeculativeExecutionPolicy>(
+                new ReferenceEqualityComparer<ISpeculativeExecutionPolicy>());
+            foreach (var options in Configuration.RequestOptions.Values)
+            {
+                speculativeExecutionPolicies.Add(options.SpeculativeExecutionPolicy);
+            }
+
+            foreach (var sep in speculativeExecutionPolicies)
+            {
+                sep.Dispose();
+            }
+
+            Session.Logger.Info("Session [" + SessionName + "] has been shut down.");
         }
 
+        /// <inheritdoc />
+        public void Shutdown(int timeoutMs = Timeout.Infinite)
+        {
+            TaskHelper.WaitToComplete(Task.Run(ShutdownAsync), timeoutMs);
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            Shutdown();
+        }
+        
         /// <summary>
         /// Initializes once (Thread-safe) the control connection and metadata associated with the Cluster instance
         /// </summary>
@@ -348,6 +387,7 @@ namespace Cassandra
                 //It was already initialized
                 return;
             }
+
             await _initLock.WaitAsync().ConfigureAwait(false);
             try
             {
@@ -356,12 +396,14 @@ namespace Cassandra
                     //It was initialized when waiting on the lock
                     return;
                 }
+
                 if (_initException != null)
                 {
                     //There was an exception that is not possible to recover from
                     throw _initException;
                 }
-                Session.Logger.Info("Connecting to cluster using {0}", GetAssemblyInfo());
+
+                Session.Logger.Info("Connecting to cluster using {0}", Session.GetAssemblyInfo());
                 try
                 {
                     // Collect all policies in collections
@@ -386,7 +428,7 @@ namespace Cassandra
                     catch (TimeoutException ex)
                     {
                         var newEx = new TimeoutException(
-                            "Cluster initialization was aborted after timing out. This mechanism is put in place to" +
+                            "Session initialization was aborted after timing out. This mechanism is put in place to" +
                             " avoid blocking the calling thread forever. This usually caused by a networking issue" +
                             " between the client driver instance and the cluster. You can increase this timeout via " +
                             "the SocketOptions.ConnectTimeoutMillis config setting. This can also be related to deadlocks " +
@@ -438,7 +480,9 @@ namespace Cassandra
                     //Throw the actual exception for the first time
                     throw;
                 }
-                Session.Logger.Info("Cluster Connected using binary protocol version: [" + _controlConnection.SerializerManager.CurrentProtocolVersion + "]");
+                Session.Logger.Info(
+                    "Session connected using binary protocol version: " +
+                    $"[{_controlConnection.SerializerManager.CurrentProtocolVersion.GetStringRepresentation()}]");
                 _initialized = true;
                 _metadata.Hosts.Added += OnHostAdded;
                 _metadata.Hosts.Removed += OnHostRemoved;
@@ -448,10 +492,8 @@ namespace Cassandra
             {
                 _initLock.Release();
             }
-
-            Session.Logger.Info("Cluster [" + Metadata.ClusterName + "] has been initialized.");
-            return;
         }
+
         private void OnHostRemoved(Host h)
         {
             _metricsManager.RemoveNodeMetrics(h);
@@ -539,8 +581,13 @@ namespace Cassandra
             }
             
             _insightsClient.Init();
+            
+            Session.Logger.Info("Session [" + SessionName + "] has been initialized.");
+        }
 
-            Session.Logger.Info("Session connected ({0})", SessionName);
+        public IReadOnlyDictionary<IContactPoint, IEnumerable<IConnectionEndPoint>> GetResolvedEndpoints()
+        {
+            return _metadata.ResolvedContactPoints;
         }
 
         /// <inheritdoc />
@@ -798,7 +845,7 @@ namespace Cassandra
                                                 " setting the keyspace as part of the PREPARE request");
             }
             var request = new PrepareRequest(serializer, cqlQuery, keyspace, customPayload);
-            return await Prepare(this, _serializerManager, request).ConfigureAwait(false);
+            return await PrepareInternal(_serializerManager, request).ConfigureAwait(false);
         }
 
         public void WaitForSchemaAgreement(RowSet rs)
@@ -873,12 +920,12 @@ namespace Cassandra
         }
 
         /// <inheritdoc />
-        public async Task<PreparedStatement> Prepare(
-            IInternalSession session, ISerializerManager serializerManager, PrepareRequest request)
+        public async Task<PreparedStatement> PrepareInternal(
+            ISerializerManager serializerManager, PrepareRequest request)
         {
-            var lbp = session.Configuration.DefaultRequestOptions.LoadBalancingPolicy;
+            var lbp = Configuration.DefaultRequestOptions.LoadBalancingPolicy;
             var handler = Configuration.PrepareHandlerFactory.CreatePrepareHandler(serializerManager, this);
-            var ps = await handler.Prepare(request, session, lbp.NewQueryPlan(session.Keyspace, null).GetEnumerator()).ConfigureAwait(false);
+            var ps = await handler.Prepare(request, this, lbp.NewQueryPlan(Keyspace, null).GetEnumerator()).ConfigureAwait(false);
             var psAdded = PreparedQueries.GetOrAdd(ps.Id, ps);
             if (ps != psAdded)
             {

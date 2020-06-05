@@ -547,7 +547,7 @@ namespace Cassandra.IntegrationTests.Core
                 return;
             }
 
-            var builder = ClusterBuilder().WithNoCompact().AddContactPoint(TestCluster.InitialContactPoint);
+            var builder = SessionBuilder().WithNoCompact().AddContactPoint(TestCluster.InitialContactPoint);
             using (ICluster cluster = builder.Build())
             {
                 var session = cluster.Connect(KeyspaceName);
@@ -568,7 +568,7 @@ namespace Cassandra.IntegrationTests.Core
                 return;
             }
 
-            var builder = ClusterBuilder().AddContactPoint(TestCluster.InitialContactPoint);
+            var builder = SessionBuilder().AddContactPoint(TestCluster.InitialContactPoint);
             using (var cluster = builder.Build())
             {
                 var session = cluster.Connect(KeyspaceName);

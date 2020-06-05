@@ -51,7 +51,7 @@ namespace Cassandra.IntegrationTests.Core
         {
             _testCluster = SimulacronCluster.CreateNew(2);
             var lbp = new TestLoadBalancingPolicy();
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                         .AddContactPoint(_testCluster.InitialContactPoint)
                                         .WithLoadBalancingPolicy(lbp)
                                         .Build())
@@ -74,7 +74,7 @@ namespace Cassandra.IntegrationTests.Core
             var contactPoints = nodes.Select(n => n.ContactPoint).ToArray();
             nodes[0].DisableConnectionListener().GetAwaiter().GetResult();
             var lbp = new TestLoadBalancingPolicy();
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                         .AddContactPoints(contactPoints.Select(s => s.Split(':').First()))
                                         .WithLoadBalancingPolicy(lbp)
                                         .Build())
@@ -111,14 +111,14 @@ namespace Cassandra.IntegrationTests.Core
             _testCluster = SimulacronCluster.CreateNew(2);
 
             // Default MaxProtocolVersion
-            using (var clusterDefault = ClusterBuilder()
+            using (var clusterDefault = SessionBuilder()
                                                .AddContactPoint(_testCluster.InitialContactPoint)
                                                .Build())
             {
                 Assert.AreEqual(Cluster.MaxProtocolVersion, clusterDefault.Configuration.ProtocolOptions.MaxProtocolVersion);
 
                 // MaxProtocolVersion set
-                var clusterMax = ClusterBuilder()
+                var clusterMax = SessionBuilder()
                     .AddContactPoint(_testCluster.InitialContactPoint)
                     .WithMaxProtocolVersion(3)
                     .Build();
@@ -132,7 +132,7 @@ namespace Cassandra.IntegrationTests.Core
                 }).ConfigureAwait(false);
 
                 // Arbitary MaxProtocolVersion set, will negotiate down upon connect
-                var clusterNegotiate = ClusterBuilder()
+                var clusterNegotiate = SessionBuilder()
                     .AddContactPoint(_testCluster.InitialContactPoint)
                     .WithMaxProtocolVersion(10)
                     .Build();
@@ -144,7 +144,7 @@ namespace Cassandra.IntegrationTests.Core
 
                 // ProtocolVersion 0 does not exist
                 Assert.Throws<ArgumentException>(
-                    () => ClusterBuilder().AddContactPoint("127.0.0.1").WithMaxProtocolVersion((byte)0));
+                    () => SessionBuilder().AddContactPoint("127.0.0.1").WithMaxProtocolVersion((byte)0));
             }
         }
 
@@ -156,7 +156,7 @@ namespace Cassandra.IntegrationTests.Core
         public async Task Should_Add_And_Query_Newly_Bootstrapped_Node()
         {
             _realCluster = TestClusterManager.CreateNew();
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                         .WithSocketOptions(new SocketOptions().SetReadTimeoutMillis(22000).SetConnectTimeoutMillis(60000))
                                         .AddContactPoint(_realCluster.InitialContactPoint)
                                         .Build())
@@ -196,7 +196,7 @@ namespace Cassandra.IntegrationTests.Core
         {
             const int numberOfNodes = 2;
             _realCluster = TestClusterManager.CreateNew(numberOfNodes);
-            using (var cluster = ClusterBuilder().AddContactPoint(_realCluster.InitialContactPoint).Build())
+            using (var cluster = SessionBuilder().AddContactPoint(_realCluster.InitialContactPoint).Build())
             {
                 await Connect(cluster, false, session =>
                 {

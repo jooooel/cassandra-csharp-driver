@@ -30,7 +30,7 @@ namespace Cassandra.Tests.Connections.TestHelpers
     internal class FakeControlConnectionFactory : IControlConnectionFactory
     {
         public IControlConnection Create(
-            IInternalCluster cluster,
+            IInternalSession session,
             IProtocolEventDebouncer protocolEventDebouncer,
             ProtocolVersion initialProtocolVersion,
             Configuration config,

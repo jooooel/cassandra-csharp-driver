@@ -42,7 +42,7 @@ namespace Cassandra.IntegrationTests.Core
             });
 
             var socketOptions = new SocketOptions().SetReadTimeoutMillis(1).SetConnectTimeoutMillis(1);
-            var builder = ClusterBuilder()
+            var builder = SessionBuilder()
                                     .AddContactPoint(TestHelper.UnreachableHostAddress)
                                     .WithSocketOptions(socketOptions);
 

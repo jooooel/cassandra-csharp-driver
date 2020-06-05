@@ -46,13 +46,12 @@ namespace Cassandra.IntegrationTests.Policies.Tests
             {
                 var contactPoint = simulacronCluster.InitialContactPoint;
                 var extendedRetryPolicy = new TestExtendedRetryPolicy();
-                var builder = ClusterBuilder()
+                var builder = SessionBuilder()
                                      .AddContactPoint(contactPoint)
                                      .WithRetryPolicy(extendedRetryPolicy)
                                      .WithReconnectionPolicy(new ConstantReconnectionPolicy(long.MaxValue));
-                using (var cluster = builder.Build())
+                using (var session = builder.Build())
                 {
-                    var session = (Session)cluster.Connect();
                     const string cql = "select * from table1";
 
                     simulacronCluster.PrimeFluent(b => b.WhenQuery(cql).ThenServerError(resultError, resultError.Value));
@@ -97,16 +96,15 @@ namespace Cassandra.IntegrationTests.Policies.Tests
                 var currentHostRetryPolicy = new CurrentHostRetryPolicy(10, null);
                 var loadBalancingPolicy = new CustomLoadBalancingPolicy(
                     queryPlan.Select(n => n.ContactPoint).ToArray());
-                var builder = ClusterBuilder()
+                var builder = SessionBuilder()
                                      .AddContactPoint(contactPoint)
                                      .WithSocketOptions(new SocketOptions()
                                                         .SetConnectTimeoutMillis(10000)
                                                         .SetReadTimeoutMillis(5000))
                                      .WithLoadBalancingPolicy(loadBalancingPolicy)
                                      .WithRetryPolicy(currentHostRetryPolicy);
-                using (var cluster = builder.Build())
+                using (var session = builder.Build())
                 {
-                    var session = (Session)cluster.Connect();
                     const string cql = "select * from table2";
 
                     queryPlan[1].PrimeFluent(
@@ -152,16 +150,15 @@ namespace Cassandra.IntegrationTests.Policies.Tests
                 var currentHostRetryPolicy = new CurrentHostRetryPolicy(10, null);
                 var loadBalancingPolicy = new CustomLoadBalancingPolicy(
                     nodes.Select(n => n.ContactPoint).ToArray());
-                var builder = ClusterBuilder()
+                var builder = SessionBuilder()
                                      .AddContactPoint(contactPoint)
                                      .WithSocketOptions(new SocketOptions()
                                                         .SetConnectTimeoutMillis(10000)
                                                         .SetReadTimeoutMillis(5000))
                                      .WithLoadBalancingPolicy(loadBalancingPolicy)
                                      .WithRetryPolicy(currentHostRetryPolicy);
-                using (var cluster = builder.Build())
+                using (var session = builder.Build())
                 {
-                    var session = (Session)cluster.Connect();
                     const string cql = "select * from table2";
 
                     nodes[0].PrimeFluent(
@@ -266,7 +263,7 @@ namespace Cassandra.IntegrationTests.Policies.Tests
 
         private class CustomLoadBalancingPolicy : ILoadBalancingPolicy
         {
-            private ICluster _cluster;
+            private ISession _session;
             private readonly string[] _hosts;
 
             public CustomLoadBalancingPolicy(string[] hosts)
@@ -274,9 +271,9 @@ namespace Cassandra.IntegrationTests.Policies.Tests
                 _hosts = hosts;
             }
 
-            public void Initialize(ICluster cluster)
+            public void Initialize(ISession session)
             {
-                _cluster = cluster;
+                _session = session;
             }
 
             public HostDistance Distance(Host host)
@@ -287,7 +284,7 @@ namespace Cassandra.IntegrationTests.Policies.Tests
             public IEnumerable<Host> NewQueryPlan(string keyspace, IStatement query)
             {
                 var queryPlan = new List<Host>();
-                var allHosts = _cluster.AllHosts();
+                var allHosts = _session.AllHosts();
                 foreach (var host in _hosts)
                 {
                     queryPlan.Add(allHosts.Single(h => h.Address.ToString() == host));

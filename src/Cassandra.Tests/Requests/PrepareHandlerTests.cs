@@ -43,7 +43,7 @@ namespace Cassandra.Tests.Requests
         public async Task Should_NotSendRequestToSecondHost_When_SecondHostDoesntHavePool()
         {
             var lbpCluster = new FakeLoadBalancingPolicy();
-            var mockResult = BuildPrepareHandler(
+            var mockResult = await BuildPrepareHandler(
                 builder =>
                 {
                     builder.QueryOptions =
@@ -58,7 +58,7 @@ namespace Cassandra.Tests.Requests
                         new DefaultRetryPolicy(), 
                         NoSpeculativeExecutionPolicy.Instance, 
                         new AtomicMonotonicTimestampGenerator());
-                });
+                }).ConfigureAwait(false);
             // mock connection send
             mockResult.ConnectionFactory.OnCreate += connection =>
             {
@@ -74,7 +74,7 @@ namespace Cassandra.Tests.Requests
                                 new byte[0], new RowSetMetadata { Columns = new CqlColumn[0] }, new RowSetMetadata { Columns = new CqlColumn[0] }));
                     });
             };
-            var queryPlan = mockResult.Session.InternalCluster
+            var queryPlan = mockResult.Session
                                       .GetResolvedEndpoints()
                                       .Select(x => new Host(x.Value.First().GetHostIpEndPointWithFallback(), contactPoint: null))
                                       .ToList();
@@ -113,7 +113,7 @@ namespace Cassandra.Tests.Requests
         public async Task Should_NotSendRequestToSecondHost_When_SecondHostPoolDoesNotHaveConnections()
         {
             var lbpCluster = new FakeLoadBalancingPolicy();
-            var mockResult = BuildPrepareHandler(
+            var mockResult = await BuildPrepareHandler(
                 builder =>
                 {
                     builder.QueryOptions =
@@ -128,7 +128,7 @@ namespace Cassandra.Tests.Requests
                         new DefaultRetryPolicy(), 
                         NoSpeculativeExecutionPolicy.Instance, 
                         new AtomicMonotonicTimestampGenerator());
-                });
+                }).ConfigureAwait(false);
             // mock connection send
             mockResult.ConnectionFactory.OnCreate += connection =>
             {
@@ -144,7 +144,7 @@ namespace Cassandra.Tests.Requests
                                 new byte[0], new RowSetMetadata { Columns = new CqlColumn[0] }, new RowSetMetadata { Columns = new CqlColumn[0] }));
                     });
             };
-            var queryPlan = mockResult.Session.InternalCluster
+            var queryPlan = mockResult.Session
                                       .GetResolvedEndpoints()
                                       .Select(x => new Host(x.Value.First().GetHostIpEndPointWithFallback(), contactPoint: null))
                                       .ToList();
@@ -184,7 +184,7 @@ namespace Cassandra.Tests.Requests
         public async Task Should_SendRequestToAllHosts_When_AllHostsHaveConnections()
         {
             var lbpCluster = new FakeLoadBalancingPolicy();
-            var mockResult = BuildPrepareHandler(
+            var mockResult = await BuildPrepareHandler(
                 builder =>
                 {
                     builder.QueryOptions =
@@ -199,7 +199,7 @@ namespace Cassandra.Tests.Requests
                         new DefaultRetryPolicy(), 
                         NoSpeculativeExecutionPolicy.Instance, 
                         new AtomicMonotonicTimestampGenerator());
-                });
+                }).ConfigureAwait(false);
             // mock connection send
             mockResult.ConnectionFactory.OnCreate += connection =>
             {
@@ -215,7 +215,7 @@ namespace Cassandra.Tests.Requests
                                 new byte[0], new RowSetMetadata { Columns = new CqlColumn[0] }, new RowSetMetadata { Columns = new CqlColumn[0] }));
                     });
             };
-            var queryPlan = mockResult.Session.InternalCluster
+            var queryPlan = mockResult.Session
                                       .GetResolvedEndpoints()
                                       .Select(x => new Host(x.Value.First().GetHostIpEndPointWithFallback(), contactPoint: null))
                                       .ToList();
@@ -257,7 +257,7 @@ namespace Cassandra.Tests.Requests
         public async Task Should_SendRequestToAllHosts_When_AllHostsHaveConnectionsButFirstHostDoesntHavePool()
         {
             var lbpCluster = new FakeLoadBalancingPolicy();
-            var mockResult = BuildPrepareHandler(
+            var mockResult = await BuildPrepareHandler(
                 builder =>
                 {
                     builder.QueryOptions =
@@ -272,7 +272,7 @@ namespace Cassandra.Tests.Requests
                         new DefaultRetryPolicy(), 
                         NoSpeculativeExecutionPolicy.Instance, 
                         new AtomicMonotonicTimestampGenerator());
-                });
+                }).ConfigureAwait(false);
             // mock connection send
             mockResult.ConnectionFactory.OnCreate += connection =>
             {
@@ -288,7 +288,7 @@ namespace Cassandra.Tests.Requests
                                 new byte[0], new RowSetMetadata { Columns = new CqlColumn[0] }, new RowSetMetadata { Columns = new CqlColumn[0] }));
                     });
             };
-            var queryPlan = mockResult.Session.InternalCluster
+            var queryPlan = mockResult.Session
                                       .GetResolvedEndpoints()
                                       .Select(x => new Host(x.Value.First().GetHostIpEndPointWithFallback(), contactPoint: null))
                                       .ToList();
@@ -328,7 +328,7 @@ namespace Cassandra.Tests.Requests
         public async Task Should_SendRequestToAllHosts_When_AllHostsHaveConnectionsButFirstHostPoolDoesntHaveConnections()
         {
             var lbpCluster = new FakeLoadBalancingPolicy();
-            var mockResult = BuildPrepareHandler(
+            var mockResult = await BuildPrepareHandler(
                 builder =>
                 {
                     builder.QueryOptions =
@@ -343,7 +343,7 @@ namespace Cassandra.Tests.Requests
                         new DefaultRetryPolicy(), 
                         NoSpeculativeExecutionPolicy.Instance, 
                         new AtomicMonotonicTimestampGenerator());
-                });
+                }).ConfigureAwait(false);
             // mock connection send
             mockResult.ConnectionFactory.OnCreate += connection =>
             {
@@ -359,7 +359,7 @@ namespace Cassandra.Tests.Requests
                                 new byte[0], new RowSetMetadata { Columns = new CqlColumn[0] }, new RowSetMetadata { Columns = new CqlColumn[0] }));
                     });
             };
-            var queryPlan = mockResult.Session.InternalCluster
+            var queryPlan = mockResult.Session
                                       .GetResolvedEndpoints()
                                       .Select(x => new Host(x.Value.First().GetHostIpEndPointWithFallback(), contactPoint: null))
                                       .ToList();
@@ -399,7 +399,7 @@ namespace Cassandra.Tests.Requests
         public async Task Should_SendRequestToFirstHostOnly_When_PrepareOnAllHostsIsFalseAndAllHostsHaveConnectionsButFirstHostPoolDoesntHaveConnections()
         {
             var lbpCluster = new FakeLoadBalancingPolicy();
-            var mockResult = BuildPrepareHandler(
+            var mockResult = await BuildPrepareHandler(
                 builder =>
                 {
                     builder.QueryOptions =
@@ -415,7 +415,7 @@ namespace Cassandra.Tests.Requests
                         new DefaultRetryPolicy(), 
                         NoSpeculativeExecutionPolicy.Instance, 
                         new AtomicMonotonicTimestampGenerator());
-                });
+                }).ConfigureAwait(false);
             // mock connection send
             mockResult.ConnectionFactory.OnCreate += connection =>
             {
@@ -431,7 +431,7 @@ namespace Cassandra.Tests.Requests
                                 new byte[0], new RowSetMetadata { Columns = new CqlColumn[0] }, new RowSetMetadata { Columns = new CqlColumn[0] }));
                     });
             };
-            var queryPlan = mockResult.Session.InternalCluster
+            var queryPlan = mockResult.Session
                                       .GetResolvedEndpoints()
                                       .Select(x => new Host(x.Value.First().GetHostIpEndPointWithFallback(), contactPoint: null))
                                       .ToList();
@@ -471,7 +471,7 @@ namespace Cassandra.Tests.Requests
             }
         }
         
-        private PrepareHandlerMockResult BuildPrepareHandler(Action<TestConfigurationBuilder> configBuilderAct)
+        private async Task<PrepareHandlerMockResult> BuildPrepareHandler(Action<TestConfigurationBuilder> configBuilderAct)
         {
             var factory = new FakeConnectionFactory(MockConnection);
 
@@ -494,16 +494,12 @@ namespace Cassandra.Tests.Requests
             });
             Mock.Get(initializerMock).Setup(i => i.GetConfiguration()).Returns(config);
 
-            // create cluster
-            var cluster = Cluster.BuildFrom(initializerMock, new List<string>());
-            cluster.Connect();
+            // create session
+            var session = await Session.BuildFromAsync(initializerMock, new List<string>()).ConfigureAwait(false);
             factory.CreatedConnections.Clear();
             
-            // create session
-            var session = new Session(cluster, config, null, SerializerManager.Default, null);
-
             // create prepare handler
-            var prepareHandler = new PrepareHandler(new SerializerManager(ProtocolVersion.V3), cluster, new ReprepareHandler());
+            var prepareHandler = new PrepareHandler(new SerializerManager(ProtocolVersion.V3), session, new ReprepareHandler());
 
             // create mock result object
             var mockResult = new PrepareHandlerMockResult(prepareHandler, session, factory);
@@ -552,7 +548,7 @@ namespace Cassandra.Tests.Requests
             public long DistanceCount;
             public long NewQueryPlanCount;
 
-            public void Initialize(ICluster cluster)
+            public void Initialize(ISession session)
             {
             }
 

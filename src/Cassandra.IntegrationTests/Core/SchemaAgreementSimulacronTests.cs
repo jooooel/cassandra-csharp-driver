@@ -56,7 +56,7 @@ namespace Cassandra.IntegrationTests.Core
 
         private Cluster BuildCluster(SimulacronCluster simulacronCluster)
         {
-            return ClusterBuilder()
+            return SessionBuilder()
                           .AddContactPoint(simulacronCluster.InitialContactPoint)
                           .WithSocketOptions(
                               new SocketOptions()

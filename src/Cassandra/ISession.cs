@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Cassandra.DataStax.Graph;
 using Cassandra.Metrics;
@@ -313,6 +314,11 @@ namespace Cassandra
         /// Disposes the session asynchronously.
         /// </summary>
         Task ShutdownAsync();
+
+        /// <summary>
+        /// Disposes the session synchronously with a configurable timeout.
+        /// </summary>
+        void Shutdown(int timeoutMs = Timeout.Infinite);
 
         /// <summary>
         ///  Gets read-only metadata on the connected cluster. 

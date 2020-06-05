@@ -328,10 +328,8 @@ APPLY BATCH".Replace("\r", ""));
         [Test]
         public void LinqSelectWhereTest()
         {
-            var clusterMock = new Mock<ICluster>();
-            clusterMock.Setup(c => c.Configuration).Returns(new Configuration());
             var sessionMock = new Mock<ISession>();
-            sessionMock.Setup(s => s.Cluster).Returns(clusterMock.Object);
+            sessionMock.Setup(c => c.Configuration).Returns(new Configuration());
             var session = sessionMock.Object;
 
             var table = session.GetTable<AllTypesEntity>();
@@ -447,16 +445,14 @@ APPLY BATCH".Replace("\r", ""));
         public void CreateTableCounterTest()
         {
             var actualCqlQueries = new List<string>();
-            var sessionMock = new Mock<ISession>(MockBehavior.Strict);
             var config = new Configuration();
             var metadata = new Metadata(config);
             var ccMock = new Mock<IControlConnection>(MockBehavior.Strict);
             ccMock.Setup(cc => cc.SerializerManager).Returns(new SerializerManager(ProtocolVersion.MaxSupported));
             metadata.ControlConnection = ccMock.Object;
-            var clusterMock = new Mock<ICluster>();
-            clusterMock.Setup(c => c.Metadata).Returns(metadata);
-            clusterMock.Setup(c => c.Configuration).Returns(config);
-            sessionMock.Setup(s => s.Cluster).Returns(clusterMock.Object);
+            var sessionMock = new Mock<ISession>();
+            sessionMock.Setup(c => c.Metadata).Returns(metadata);
+            sessionMock.Setup(c => c.Configuration).Returns(config);
             sessionMock
                 .Setup(s => s.Execute(It.IsAny<string>()))
                 .Returns(() => new RowSet())
@@ -484,16 +480,14 @@ APPLY BATCH".Replace("\r", ""));
             Assert.AreEqual("SELECT \"Description\", \"Id\", \"Name\" FROM \"InheritedEntity\" WHERE \"Id\" = ?", query1.ToString());
             var query2 = (from e in table where e.Id == 1 && e.Name == "MyName" select new { e.Id, e.Name, e.Description });
             Assert.AreEqual("SELECT \"Id\", \"Name\", \"Description\" FROM \"InheritedEntity\" WHERE \"Id\" = ? AND \"Name\" = ?", query2.ToString());
-            var sessionMock = new Mock<ISession>(MockBehavior.Strict);
             var config = new Configuration();
             var metadata = new Metadata(config);
             var ccMock = new Mock<IControlConnection>(MockBehavior.Strict);
             ccMock.Setup(cc => cc.SerializerManager).Returns(new SerializerManager(ProtocolVersion.MaxSupported));
             metadata.ControlConnection = ccMock.Object;
-            var clusterMock = new Mock<ICluster>();
-            clusterMock.Setup(c => c.Metadata).Returns(metadata);
-            clusterMock.Setup(c => c.Configuration).Returns(config);
-            sessionMock.Setup(s => s.Cluster).Returns(clusterMock.Object);
+            var sessionMock = new Mock<ISession>();
+            sessionMock.Setup(c => c.Metadata).Returns(metadata);
+            sessionMock.Setup(c => c.Configuration).Returns(config);
             string createQuery = null;
             sessionMock
                 .Setup(s => s.Execute(It.IsAny<string>()))

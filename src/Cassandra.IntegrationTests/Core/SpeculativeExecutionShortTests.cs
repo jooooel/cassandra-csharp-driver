@@ -41,7 +41,7 @@ namespace Cassandra.IntegrationTests.Core
             ISpeculativeExecutionPolicy speculativeExecutionPolicy = null, bool warmup = true,
             ILoadBalancingPolicy lbp = null, PoolingOptions pooling = null)
         {
-            var builder = ClusterBuilder()
+            var builder = SessionBuilder()
                 .AddContactPoint(TestCluster.InitialContactPoint)
                 .WithSpeculativeExecutionPolicy(speculativeExecutionPolicy)
                 .WithLoadBalancingPolicy(lbp ?? Cassandra.Policies.DefaultLoadBalancingPolicy)

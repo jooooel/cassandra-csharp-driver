@@ -34,7 +34,7 @@ namespace Cassandra
     ///  Keeps metadata on the connected cluster, including known nodes and schema
     ///  definitions.
     /// </summary>
-    public class Metadata : IDisposable
+    public class Metadata
     {
         private const string SelectSchemaVersionPeers = "SELECT schema_version FROM system.peers";
         private const string SelectSchemaVersionLocal = "SELECT schema_version FROM system.local";
@@ -94,12 +94,7 @@ namespace Cassandra
         {
             _schemaParser = schemaParser;
         }
-
-        public void Dispose()
-        {
-            ShutDown();
-        }
-
+        
         internal void SetResolvedContactPoints(IDictionary<IContactPoint, IEnumerable<IConnectionEndPoint>> resolvedContactPoints)
         {
             _resolvedContactPoints = new CopyOnWriteDictionary<IContactPoint, IEnumerable<IConnectionEndPoint>>(resolvedContactPoints);
@@ -466,14 +461,7 @@ namespace Cassandra
             }
             return true;
         }
-
-        public void ShutDown(int timeoutMs = Timeout.Infinite)
-        {
-            //it is really not required to be called, left as it is part of the public API
-            //dereference the control connection
-            ControlConnection = null;
-        }
-
+        
         /// <summary>
         /// this method should be called by the event debouncer
         /// </summary>

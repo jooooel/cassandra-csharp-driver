@@ -46,7 +46,7 @@ namespace Cassandra.IntegrationTests.Core
             using (var testCluster = SimulacronCluster.CreateNew(2))
             {
                 const int connectionLength = 4;
-                var builder = ClusterBuilder()
+                var builder = SessionBuilder()
                     .AddContactPoint(testCluster.InitialContactPoint)
                     .WithPoolingOptions(new PoolingOptions()
                         .SetCoreConnectionsPerHost(HostDistance.Local, connectionLength)
@@ -140,7 +140,7 @@ namespace Cassandra.IntegrationTests.Core
             using (var sCluster = SimulacronCluster.CreateNew(new SimulacronOptions()))
             {
                 const int connectionLength = 4;
-                var builder = ClusterBuilder()
+                var builder = SessionBuilder()
                                      .AddContactPoint(sCluster.InitialContactPoint)
                                      .WithPoolingOptions(new PoolingOptions()
                                          .SetCoreConnectionsPerHost(HostDistance.Local, connectionLength)
@@ -208,7 +208,7 @@ namespace Cassandra.IntegrationTests.Core
             {
                 var nodes = testCluster.GetNodes().ToList();
                 nodes[0].Stop().GetAwaiter().GetResult();
-                using (var cluster = ClusterBuilder()
+                using (var cluster = SessionBuilder()
                                             .AddContactPoint(testCluster.InitialContactPoint)
                                             .Build())
                 {
@@ -233,7 +233,7 @@ namespace Cassandra.IntegrationTests.Core
                 //use ssl
                 var testCluster = TestClusterManager.CreateNew(1, new TestClusterOptions { UseSsl = true });
 
-                using (var cluster = ClusterBuilder()
+                using (var cluster = SessionBuilder()
                                             .AddContactPoint(testCluster.InitialContactPoint)
                                             .WithSSL(new SSLOptions().SetRemoteCertValidationCallback((a, b, c, d) => true))
                                             .Build())
@@ -258,7 +258,7 @@ namespace Cassandra.IntegrationTests.Core
         {
             var options1 = PoolingOptions.Create(protocolVersion);
             using (var sCluster = SimulacronCluster.CreateNew(new SimulacronOptions()))
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                        .AddContactPoint(sCluster.InitialContactPoint)
                                        .WithPoolingOptions(options1)
                                        .Build())
@@ -288,7 +288,7 @@ namespace Cassandra.IntegrationTests.Core
 
             // Use multiple DCs: 4 nodes in first DC and 3 nodes in second DC
             using (var testCluster = SimulacronCluster.CreateNew(new SimulacronOptions { Nodes = $"{nodeLength},3" }))
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                         .AddContactPoint(testCluster.InitialContactPoint)
                                         .WithPoolingOptions(poolingOptions).Build())
             {
@@ -309,7 +309,7 @@ namespace Cassandra.IntegrationTests.Core
         public async Task ControlConnection_Should_Reconnect_To_Up_Host()
         {
             const int connectionLength = 1;
-            var builder = ClusterBuilder()
+            var builder = SessionBuilder()
                                  .WithPoolingOptions(new PoolingOptions()
                                      .SetCoreConnectionsPerHost(HostDistance.Local, connectionLength)
                                      .SetMaxConnectionsPerHost(HostDistance.Local, connectionLength)
@@ -358,7 +358,7 @@ namespace Cassandra.IntegrationTests.Core
         public async Task ControlConnection_Should_Reconnect_After_Failed_Attemps()
         {
             const int connectionLength = 1;
-            var builder = ClusterBuilder()
+            var builder = SessionBuilder()
                                  .WithPoolingOptions(new PoolingOptions()
                                      .SetCoreConnectionsPerHost(HostDistance.Local, connectionLength)
                                      .SetMaxConnectionsPerHost(HostDistance.Local, connectionLength)
@@ -428,7 +428,7 @@ namespace Cassandra.IntegrationTests.Core
         {
             const int connectionLength = 2;
             const int maxRequestsPerConnection = 100;
-            var builder = ClusterBuilder()
+            var builder = SessionBuilder()
                                  .WithPoolingOptions(
                                      PoolingOptions.Create()
                                                    .SetCoreConnectionsPerHost(HostDistance.Local, connectionLength)
@@ -478,7 +478,7 @@ namespace Cassandra.IntegrationTests.Core
             const int maxRequestsPerConnection = 50;
             var lbp = new TestHelper.OrderedLoadBalancingPolicy().UseRoundRobin();
 
-            var builder = ClusterBuilder()
+            var builder = SessionBuilder()
                                  .WithPoolingOptions(
                                      PoolingOptions.Create()
                                                    .SetCoreConnectionsPerHost(HostDistance.Local, connectionLength)
@@ -556,7 +556,7 @@ namespace Cassandra.IntegrationTests.Core
         public async Task Should_Use_Single_Host_When_Configured_At_Statement_Level()
         {
             const string query = "SELECT * FROM system.local";
-            var builder = ClusterBuilder().WithLoadBalancingPolicy(new TestHelper.OrderedLoadBalancingPolicy());
+            var builder = SessionBuilder().WithLoadBalancingPolicy(new TestHelper.OrderedLoadBalancingPolicy());
 
             using (var testCluster = SimulacronCluster.CreateNew(new SimulacronOptions { Nodes = "3" }))
             using (var cluster = builder.AddContactPoint(testCluster.InitialContactPoint).Build())
@@ -593,7 +593,7 @@ namespace Cassandra.IntegrationTests.Core
             var lbp = new TestHelper.CustomLoadBalancingPolicy(
                 (cluster, ks, stmt) => cluster.AllHosts(),
                 (cluster, host) => host.Equals(cluster.AllHosts().Last()) ? HostDistance.Ignored : HostDistance.Local);
-            var builder = ClusterBuilder().WithLoadBalancingPolicy(lbp);
+            var builder = SessionBuilder().WithLoadBalancingPolicy(lbp);
 
             using (var testCluster = SimulacronCluster.CreateNew(new SimulacronOptions { Nodes = "3" }))
             using (var cluster = builder.AddContactPoint(testCluster.InitialContactPoint).Build())
@@ -615,7 +615,7 @@ namespace Cassandra.IntegrationTests.Core
         [Test]
         public async Task Should_Throw_NoHostAvailableException_When_Targeting_Single_Host_With_No_Connections()
         {
-            var builder = ClusterBuilder();
+            var builder = SessionBuilder();
             using (var testCluster = SimulacronCluster.CreateNew(new SimulacronOptions { Nodes = "3" }))
             using (var cluster = builder.AddContactPoint(testCluster.InitialContactPoint).Build())
             {
@@ -676,7 +676,7 @@ namespace Cassandra.IntegrationTests.Core
         [Test]
         public void The_Query_Plan_Should_Contain_A_Single_Host_When_Targeting_Single_Host()
         {
-            var builder = ClusterBuilder();
+            var builder = SessionBuilder();
             using (var testCluster = SimulacronCluster.CreateNew(new SimulacronOptions { Nodes = "3" }))
             using (var cluster = builder.AddContactPoint(testCluster.InitialContactPoint).Build())
             {
@@ -708,7 +708,7 @@ namespace Cassandra.IntegrationTests.Core
                 return cluster.AllHosts();
             });
 
-            var builder = ClusterBuilder().WithLoadBalancingPolicy(lbp);
+            var builder = SessionBuilder().WithLoadBalancingPolicy(lbp);
 
             using (var testCluster = SimulacronCluster.CreateNew(new SimulacronOptions { Nodes = "3" }))
             using (var cluster = builder.AddContactPoint(testCluster.InitialContactPoint).Build())

@@ -19,13 +19,14 @@ using System.Collections.Generic;
 using Cassandra.IntegrationTests.TestBase;
 using Cassandra.IntegrationTests.TestClusterManagement;
 using Cassandra.IntegrationTests.TestClusterManagement.Simulacron;
+using Cassandra.SessionManagement;
 using NUnit.Framework;
 
 namespace Cassandra.IntegrationTests
 {
-    public abstract class SharedSimulacronTests : TestGlobals
+    internal abstract class SharedSimulacronTests : TestGlobals
     {
-        private readonly List<Cluster> _clusterInstances = new List<Cluster>();
+        private readonly List<IInternalSession> _sessionInstances = new List<IInternalSession>();
         private readonly List<SimulacronCluster> _simulacronClusters = new List<SimulacronCluster>();
         
         /// <summary>
@@ -42,16 +43,11 @@ namespace Cassandra.IntegrationTests
         /// Gets the Cassandra cluster that is used for testing
         /// </summary>
         protected SimulacronCluster TestCluster { get; private set; }
-
-        /// <summary>
-        /// The shared cluster instance of the fixture
-        /// </summary>
-        protected Cluster Cluster { get; set; }
-
+        
         /// <summary>
         /// The shared Session instance of the fixture
         /// </summary>
-        protected Session Session { get; private set; }
+        protected IInternalSession Session { get; private set; }
 
         /// <summary>
         /// Gets or sets the name of the default keyspace used for this instance
@@ -103,11 +99,10 @@ namespace Cassandra.IntegrationTests
 
             if (CreateSession)
             {
-                Cluster = ClusterBuilder().AddContactPoint(TestCluster.InitialContactPoint)
-                                 .WithQueryTimeout(60000)
-                                 .WithSocketOptions(new SocketOptions().SetConnectTimeoutMillis(30000))
-                                 .Build();
-                Session = (Session) Cluster.Connect();
+                Session = SessionBuilder().AddContactPoint(TestCluster.InitialContactPoint)
+                                          .WithQueryTimeout(60000)
+                                          .WithSocketOptions(new SocketOptions().SetConnectTimeoutMillis(30000))
+                                          .BuildInternal();
                 Session.CreateKeyspace(KeyspaceName, null, false);
                 Session.ChangeKeyspace(KeyspaceName);
             }
@@ -116,14 +111,15 @@ namespace Cassandra.IntegrationTests
         [OneTimeTearDown]
         public virtual void OneTimeTearDown()
         {
-            if (Cluster != null)
+            if (Session != null)
             {
-                Cluster.Shutdown(10000);   
+                Session.Shutdown(10000);   
             }
+
             //Shutdown the other instances created by helper methods
-            foreach (var c in _clusterInstances)
+            foreach (var s in _sessionInstances)
             {
-                c.Shutdown(10000);
+                s.Shutdown(10000);
             }
 
             foreach (var c in _simulacronClusters)
@@ -131,19 +127,14 @@ namespace Cassandra.IntegrationTests
                 c.Dispose();
             }
         }
-
-        protected virtual ISession GetNewSession(string keyspace = null)
+        
+        protected virtual ISession GetNewSession(Action<Builder> build = null)
         {
-            return GetNewCluster().Connect(keyspace);
-        }
-
-        protected virtual ICluster GetNewCluster(Action<Builder> build = null)
-        {
-            var builder = ClusterBuilder().AddContactPoint(TestCluster.InitialContactPoint);
+            var builder = SessionBuilder().AddContactPoint(TestCluster.InitialContactPoint);
             build?.Invoke(builder);
-            var cluster = builder.Build();
-            _clusterInstances.Add(cluster);
-            return cluster;
+            var session = builder.BuildInternal();
+            _sessionInstances.Add(session);
+            return session;
         }
     }
 }

@@ -63,7 +63,7 @@ namespace Cassandra.Tests.ExecutionProfiles
                                           .WithRetryPolicy(rp)
                                           ).Build();
 
-            var mockResult = BuildRequestHandler(
+            var mockResult = await BuildRequestHandler(
                 BuildStatement(requestType)
                     .SetIdempotence(true)
                     .SetConsistencyLevel(ConsistencyLevel.EachQuorum)
@@ -81,7 +81,7 @@ namespace Cassandra.Tests.ExecutionProfiles
                     builder.Policies = new Cassandra.Policies(
                         lbpCluster, new ConstantReconnectionPolicy(5), rpCluster, sepCluster, new AtomicMonotonicTimestampGenerator());
                 },
-                profile);
+                profile).ConfigureAwait(false);
 
             await mockResult.RequestHandler.SendAsync().ConfigureAwait(false);
             
@@ -123,7 +123,7 @@ namespace Cassandra.Tests.ExecutionProfiles
                                           .WithRetryPolicy(rp)
                                           ).Build();
 
-            var mockResult = BuildRequestHandler(
+            var mockResult = await BuildRequestHandler(
                 BuildStatement(requestType).SetIdempotence(true),
                 builder =>
                 {
@@ -136,7 +136,7 @@ namespace Cassandra.Tests.ExecutionProfiles
                     builder.Policies = new Cassandra.Policies(
                         lbpCluster, new ConstantReconnectionPolicy(5), rpCluster, sepCluster, new AtomicMonotonicTimestampGenerator());
                 },
-                profile);
+                profile).ConfigureAwait(false);
 
             await mockResult.RequestHandler.SendAsync().ConfigureAwait(false);
             
@@ -169,7 +169,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             var sep = new FakeSpeculativeExecutionPolicy();
             var rp = new FakeRetryPolicy();
 
-            var mockResult = BuildRequestHandler(
+            var mockResult = await BuildRequestHandler(
                 BuildStatement(requestType).SetIdempotence(true),
                 builder =>
                 {
@@ -182,7 +182,7 @@ namespace Cassandra.Tests.ExecutionProfiles
                     builder.Policies = new Cassandra.Policies(
                         lbpCluster, new ConstantReconnectionPolicy(5), rpCluster, sepCluster, new AtomicMonotonicTimestampGenerator());
                 },
-                null);
+                null).ConfigureAwait(false);
 
             await mockResult.RequestHandler.SendAsync().ConfigureAwait(false);
 
@@ -248,7 +248,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             }
         }
 
-        private RequestHandlerMockResult BuildRequestHandler(
+        private async Task<RequestHandlerMockResult> BuildRequestHandler(
             IStatement statement,
             Action<TestConfigurationBuilder> configBuilderAct,
             IExecutionProfile profile)
@@ -274,13 +274,9 @@ namespace Cassandra.Tests.ExecutionProfiles
             });
             Mock.Get(initializerMock).Setup(i => i.GetConfiguration()).Returns(config);
 
-            // create cluster
-            var cluster = Cluster.BuildFrom(initializerMock, new List<string>());
-            cluster.Connect();
-
             // create session
-            var session = new Session(cluster, config, null, SerializerManager.Default, null);
-
+            var session = await Session.BuildFromAsync(initializerMock, new List<string>()).ConfigureAwait(false);
+            
             // create request handler
             var options = profile != null
                 ? new RequestOptions(profile, null, config.Policies, config.SocketOptions, config.QueryOptions, config.ClientOptions)
@@ -331,9 +327,9 @@ namespace Cassandra.Tests.ExecutionProfiles
             return mockResult;
         }
 
-        private IInternalCluster MockCluster()
+        private IInternalSession MockCluster()
         {
-            var cluster = Mock.Of<IInternalCluster>();
+            var cluster = Mock.Of<IInternalSession>();
             Mock.Get(cluster).Setup(c => c.RetrieveAndSetDistance(It.IsAny<Host>())).Returns(HostDistance.Local);
             return cluster;
         }
@@ -368,7 +364,7 @@ namespace Cassandra.Tests.ExecutionProfiles
         {
             public long Count;
 
-            public void Initialize(ICluster cluster)
+            public void Initialize(ISession session)
             {
             }
 
@@ -453,7 +449,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             {
             }
 
-            public void Initialize(ICluster cluster)
+            public void Initialize(ISession session)
             {
             }
 

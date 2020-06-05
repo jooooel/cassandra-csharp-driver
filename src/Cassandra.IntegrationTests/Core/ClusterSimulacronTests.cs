@@ -102,7 +102,7 @@ namespace Cassandra.IntegrationTests.Core
         [Test]
         public void Cluster_Should_Ignore_IpV6_Addresses_For_Not_Valid_Hosts()
         {
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                         .AddContactPoint(IPAddress.Parse("::1"))
                                         .AddContactPoint(TestCluster.InitialContactPoint)
                                         .Build())
@@ -118,7 +118,7 @@ namespace Cassandra.IntegrationTests.Core
         [Test]
         public void Should_Try_To_Resolve_And_Continue_With_The_Next_Contact_Point_If_It_Fails()
         {
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                         .AddContactPoint("not-a-host")
                                         .AddContactPoint(TestCluster.InitialContactPoint)
                                         .Build())
@@ -132,7 +132,7 @@ namespace Cassandra.IntegrationTests.Core
         [Test]
         public async Task Cluster_Init_Keyspace_Race_Test()
         {
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                         .AddContactPoint(TestCluster.InitialContactPoint)
                                         //using a keyspace
                                         .WithDefaultKeyspace("system")
@@ -173,7 +173,7 @@ namespace Cassandra.IntegrationTests.Core
             TestCluster.PrimeFluent(
                 b => b.WhenQuery("USE \"ANOTHER_THAT_DOES_NOT_EXIST\"").ThenServerError(ServerError.Invalid, "msg"));
 
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                         .AddContactPoint(TestCluster.InitialContactPoint)
                                         //using a keyspace that does not exists
                                         .WithDefaultKeyspace("MY_WRONG_KEYSPACE")
@@ -198,7 +198,7 @@ namespace Cassandra.IntegrationTests.Core
                 Assert.Ignore("Test uses localhost and host name could not be resolved");
             }
 
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                         .AddContactPoint("localhost")
                                         .Build())
             {
@@ -290,7 +290,7 @@ namespace Cassandra.IntegrationTests.Core
             TestHelper.RetryAssert(
                 () =>
                 {
-                    var builder = ClusterBuilder().AddContactPoints(TestCluster.ContactPoints);
+                    var builder = SessionBuilder().AddContactPoints(TestCluster.ContactPoints);
                     b(builder);
                     cluster = builder.Build();
                     try

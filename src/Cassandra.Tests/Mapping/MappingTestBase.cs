@@ -90,9 +90,7 @@ namespace Cassandra.Tests.Mapping
             {
                 config = new MappingConfiguration().Define(new FluentUserMapping());
             }
-            var clusterMock = new Mock<ICluster>();
-            clusterMock.Setup(c => c.Configuration).Returns(new Configuration());
-            sessionMock.Setup(s => s.Cluster).Returns(clusterMock.Object);
+            sessionMock.Setup(c => c.Configuration).Returns(new Configuration());
             return new Mapper(sessionMock.Object, config);
         }
 
@@ -110,9 +108,7 @@ namespace Cassandra.Tests.Mapping
             }
             var sessionMock = new Mock<ISession>(MockBehavior.Strict);
             sessionMock.Setup(s => s.Keyspace).Returns<string>(null);
-            var clusterMock = new Mock<ICluster>();
-            clusterMock.Setup(c => c.Configuration).Returns(new Configuration());
-            sessionMock.Setup(s => s.Cluster).Returns(clusterMock.Object);
+            sessionMock.Setup(c => c.Configuration).Returns(new Configuration());
             sessionMock
                 .Setup(s => s.ExecuteAsync(It.IsAny<IStatement>()))
                 .Returns(() => TaskHelper.ToTask(rs))
@@ -164,13 +160,10 @@ namespace Cassandra.Tests.Mapping
         protected void TestQueryTrace(Func<Table<AllTypesEntity>, QueryTrace> queryExecutor)
         {
             var rs = new RowSet();
-
-            var clusterMock = new Mock<ICluster>();
-            clusterMock.Setup(c => c.Configuration).Returns(new Configuration());
             
             var sessionMock = new Mock<ISession>(MockBehavior.Strict);
+            sessionMock.Setup(c => c.Configuration).Returns(new Configuration());
             sessionMock.Setup(s => s.Keyspace).Returns<string>(null);
-            sessionMock.Setup(s => s.Cluster).Returns(clusterMock.Object);
             sessionMock
                 .Setup(s => s.ExecuteAsync(It.IsAny<IStatement>()))
                 .ReturnsAsync(() => rs)

@@ -56,7 +56,7 @@ namespace Cassandra.Tests.Connections.Control
 
         private ControlConnectionCreateResult NewInstance(
             IDictionary<IPEndPoint, IRow> rows = null,
-            IInternalCluster cluster = null,
+            IInternalSession session = null,
             Configuration config = null,
             Metadata metadata = null,
             Action<TestConfigurationBuilder> configBuilderAct = null)
@@ -79,9 +79,9 @@ namespace Cassandra.Tests.Connections.Control
                 };
             }
 
-            if (cluster == null)
+            if (session == null)
             {
-                cluster = Mock.Of<IInternalCluster>();
+                session = Mock.Of<IInternalSession>();
             }
 
             var connectionFactory = new FakeConnectionFactory();
@@ -102,7 +102,7 @@ namespace Cassandra.Tests.Connections.Control
                 config = builder.Build();
             }
 
-            Mock.Get(cluster).SetupGet(c => c.Configuration).Returns(config);
+            Mock.Get(session).SetupGet(c => c.Configuration).Returns(config);
             
             if (metadata == null)
             {
@@ -113,10 +113,10 @@ namespace Cassandra.Tests.Connections.Control
             {
                 ConnectionFactory = connectionFactory,
                 Metadata = metadata,
-                Cluster = cluster,
+                Session = session,
                 Config = config,
                 ControlConnection = new ControlConnection(
-                    cluster,
+                    session,
                     GetEventDebouncer(config),
                     ProtocolVersion.MaxSupported,
                     config,
@@ -151,7 +151,7 @@ namespace Cassandra.Tests.Connections.Control
             {
                 builder.SocketOptions = new SocketOptions().SetConnectTimeoutMillis(100).SetReadTimeoutMillis(100);
                 builder.Policies = new Cassandra.Policies(
-                    new ClusterUnitTests.FakeHostDistanceLbp(new Dictionary<string, HostDistance>
+                    new SessionBuilderTests.FakeHostDistanceLbp(new Dictionary<string, HostDistance>
                     {
                         { "127.0.0.1", HostDistance.Local },
                         { "127.0.0.2", HostDistance.Local },
@@ -199,7 +199,7 @@ namespace Cassandra.Tests.Connections.Control
             {
                 var metadata = createResult.Metadata;
                 var config = createResult.Config;
-                var cluster = createResult.Cluster;
+                var session = createResult.Session;
                 var cc = createResult.ControlConnection;
                 cc.InitAsync().GetAwaiter().GetResult();
                 Assert.AreEqual(4, metadata.AllHosts().Count);
@@ -209,11 +209,11 @@ namespace Cassandra.Tests.Connections.Control
                 var host3 = metadata.GetHost(new IPEndPoint(hostAddress3, ProtocolOptions.DefaultPort));
                 Assert.NotNull(host3);
 
-                Mock.Get(cluster)
+                Mock.Get(session)
                     .Setup(c => c.RetrieveAndSetDistance(It.IsAny<Host>()))
                     .Returns<Host>(h => config.Policies.LoadBalancingPolicy.Distance(h));
-                Mock.Get(cluster).Setup(c => c.AllHosts()).Returns(() => metadata.AllHosts());
-                config.Policies.LoadBalancingPolicy.Initialize(cluster);
+                Mock.Get(session).Setup(c => c.AllHosts()).Returns(() => metadata.AllHosts());
+                config.Policies.LoadBalancingPolicy.Initialize(session);
 
                 connectionOpenEnabled = false;
 
@@ -260,18 +260,18 @@ namespace Cassandra.Tests.Connections.Control
                     {
                         var metadata = createResult.Metadata;
                         var config = createResult.Config;
-                        var cluster = createResult.Cluster;
+                        var session = createResult.Session;
                         var cc = createResult.ControlConnection;
                         cc.InitAsync().GetAwaiter().GetResult();
                         Assert.AreEqual(4, metadata.AllHosts().Count);
 
-                        Mock.Get(cluster)
+                        Mock.Get(session)
                             .Setup(c => c.RetrieveAndSetDistance(It.IsAny<Host>()))
                             .Returns<Host>(h => config.Policies.LoadBalancingPolicy.Distance(h));
-                        Mock.Get(cluster).Setup(c => c.AllHosts()).Returns(() => metadata.AllHosts());
-                        Mock.Get(cluster).Setup(c => c.GetControlConnection()).Returns(cc);
-                        config.LocalDatacenterProvider.Initialize(cluster);
-                        config.Policies.LoadBalancingPolicy.Initialize(cluster);
+                        Mock.Get(session).Setup(c => c.AllHosts()).Returns(() => metadata.AllHosts());
+                        Mock.Get(session).Setup(c => c.GetControlConnection()).Returns(cc);
+                        config.LocalDatacenterProvider.Initialize(session);
+                        config.Policies.LoadBalancingPolicy.Initialize(session);
 
                         createResult.ConnectionFactory.CreatedConnections.Clear();
 
@@ -362,7 +362,7 @@ namespace Cassandra.Tests.Connections.Control
             {
                 ConnectionFactory = connectionFactory,
                 ControlConnection = new ControlConnection(
-                    Mock.Of<IInternalCluster>(),
+                    Mock.Of<IInternalSession>(),
                     new ProtocolEventDebouncer(
                         new FakeTimerFactory(), TimeSpan.Zero, TimeSpan.Zero),
                     ProtocolVersion.V3,
@@ -387,7 +387,7 @@ namespace Cassandra.Tests.Connections.Control
 
             public FakeConnectionFactory ConnectionFactory { get; set; }
             
-            public IInternalCluster Cluster { get; set; }
+            public IInternalSession Session { get; set; }
         }
 
         private class TestContactPoint : IContactPoint

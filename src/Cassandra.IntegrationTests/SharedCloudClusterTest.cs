@@ -29,9 +29,9 @@ namespace Cassandra.IntegrationTests
         private readonly bool _clientCert;
         protected override string[] SetupQueries => base.SetupQueries;
 
-        protected new ICluster Cluster => _cluster;
+        protected new ISession Session => _session;
 
-        private ICluster _cluster;
+        private ISession _session;
 
         protected SharedCloudClusterTest(
             bool createSession = true, bool sniCertValidation = true, bool clientCert = true) :
@@ -59,27 +59,27 @@ namespace Cassandra.IntegrationTests
             {
                 try
                 {
-                    _cluster = CreateCluster();
-                    SetBaseSession(Cluster.Connect());
+                    var builder = CreateBuilder();
+                    SetBaseSession(builder.Build());
                     return;
                 }
                 catch (Exception ex)
                 {
                     last = ex; 
                     Task.Delay(1000).GetAwaiter().GetResult();
-                    if (Cluster != null)
+                    if (Session != null)
                     {
-                        Cluster.Dispose();
-                        _cluster = null;
+                        Session.Dispose();
+                        _session = null;
                     }
                 }
             }
             throw last;
         }
 
-        private ICluster CreateCluster(string creds = "creds-v1.zip", Action<Builder> act = null)
+        private Builder CreateBuilder(string creds = "creds-v1.zip", Action<Builder> act = null)
         {
-            var builder = ClusterBuilder()
+            var builder = SessionBuilder()
                                    .WithSocketOptions(new SocketOptions().SetReadTimeoutMillis(22000).SetConnectTimeoutMillis(60000))
                                    .WithQueryTimeout(60000);
             act?.Invoke(builder);
@@ -89,36 +89,36 @@ namespace Cassandra.IntegrationTests
                       .WithPoolingOptions(
                           new PoolingOptions().SetHeartBeatInterval(200))
                       .WithReconnectionPolicy(new ConstantReconnectionPolicy(100));
-            return builder.Build();
+            return builder;
         }
 
-        protected ICluster CreateTemporaryCluster(string creds = "creds-v1.zip", Action<Builder> act = null)
+        protected async Task<ISession> CreateTemporarySession(string creds = "creds-v1.zip", Action<Builder> act = null)
         {
-            var cluster = CreateCluster(creds, act);
-            ClusterInstances.Add(cluster);
-            return cluster;
+            var builder = CreateBuilder(creds, act);
+            var session = await builder.BuildAsync().ConfigureAwait(false);
+            SessionInstances.Add(session);
+            return session;
         }
         
-        protected async Task<ISession> CreateSessionAsync(
+        protected Task<ISession> CreateSessionAsync(
             string creds = "creds-v1.zip", int retries = SharedCloudClusterTest.MaxRetries, Action<Builder> act = null)
         {
             Exception last = null;
-            ICluster cluster = null;
+            ISession session = null;
             for (var i = 0; i < SharedCloudClusterTest.MaxRetries; i++)
             {
                 try
                 {
-                    cluster = CreateTemporaryCluster(creds, act);
-                    return await cluster.ConnectAsync().ConfigureAwait(false);
+                    return CreateTemporarySession(creds, act);
                 }
                 catch (Exception ex)
                 {
                     last = ex;
                     Task.Delay(1000).GetAwaiter().GetResult();
-                    if (cluster != null)
+                    if (session != null)
                     {
-                        cluster.Dispose();
-                        cluster = null;
+                        session.Dispose();
+                        session = null;
                     }
                 }
             }

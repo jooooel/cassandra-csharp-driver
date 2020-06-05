@@ -69,7 +69,7 @@ namespace Cassandra.Tests
                 _distance = distance;
             }
 
-            public void Initialize(ICluster cluster)
+            public void Initialize(ISession session)
             {
 
             }

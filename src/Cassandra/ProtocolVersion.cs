@@ -59,11 +59,12 @@ namespace Cassandra
         /// The higher protocol version that is supported by this driver.
         /// <para>When acquiring the first connection, it will use this version to start protocol negotiation.</para>
         /// </summary>
-        MaxSupported = DseV2,
+        MaxSupported = ProtocolVersion.DseV2,
+
         /// <summary>
         /// The lower protocol version that is supported by this driver.
         /// </summary>
-        MinSupported = V1
+        MinSupported = ProtocolVersion.V1
     }
 
     internal static class ProtocolVersionExtensions
@@ -326,6 +327,19 @@ namespace Cassandra
         public static bool IsBeta(this ProtocolVersion version)
         {
             return version == ProtocolVersion.V5;
+        }
+
+        public static string GetStringRepresentation(this ProtocolVersion version)
+        {
+            switch (version)
+            {
+                case ProtocolVersion.MaxSupported:
+                    return nameof(ProtocolVersion.DseV2);
+                case ProtocolVersion.MinSupported:
+                    return nameof(ProtocolVersion.V1);
+                default:
+                    return version.ToString();
+            }
         }
     }
 }

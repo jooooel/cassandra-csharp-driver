@@ -127,13 +127,13 @@ namespace Cassandra.IntegrationTests.DataStax.Cloud
         [Test]
         public void Should_ThrowException_When_BundleDoesNotExist()
         {
-            var ex = Assert.Throws<InvalidOperationException>(() => ClusterBuilder().WithCloudSecureConnectionBundle("does-not-exist.zip").Build());
+            var ex = Assert.Throws<InvalidOperationException>(() => SessionBuilder().WithCloudSecureConnectionBundle("does-not-exist.zip").Build());
         }
 
         [Test]
         public void Should_SupportOverridingAuthProvider()
         {
-            var cluster = CreateTemporaryCluster(act: b => b.WithCredentials("user1", "12345678"));
+            var cluster = CreateTemporarySession(act: b => b.WithCredentials("user1", "12345678"));
             Assert.AreEqual(typeof(PlainTextAuthProvider), cluster.Configuration.AuthProvider.GetType());
             var provider = (PlainTextAuthProvider)cluster.Configuration.AuthProvider;
             Assert.AreEqual("user1", provider.Username);
@@ -142,7 +142,7 @@ namespace Cassandra.IntegrationTests.DataStax.Cloud
         [Test]
         public void Should_FailFast_When_ConfigJsonDoesNotHaveCredentialsAndUserDoesNotProvideCredentials()
         {
-            var ex = Assert.Throws<ArgumentException>(() => CreateTemporaryCluster("creds-v1-wo-creds.zip"));
+            var ex = Assert.Throws<ArgumentException>(() => CreateTemporarySession("creds-v1-wo-creds.zip"));
             Assert.AreEqual(
                 ex.Message, 
                 "No credentials were provided. When using the secure connection bundle, " +

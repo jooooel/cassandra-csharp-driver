@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Cassandra.ExecutionProfiles;
 using Cassandra.Tests.Connections.TestHelpers;
 using Moq;
@@ -27,16 +28,16 @@ using NUnit.Framework;
 namespace Cassandra.Tests
 {
     [TestFixture]
-    public class ClusterUnitTests
+    public class SessionBuilderTests
     {
         [OneTimeSetUp]
         public void OneTimeSetUp()
         {
-            Diagnostics.CassandraTraceSwitch.Level = System.Diagnostics.TraceLevel.Verbose;
+            Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Verbose;
         }
         
         [Test]
-        public void DuplicateContactPointsShouldIgnore()
+        public async Task DuplicateContactPointsShouldIgnore()
         {
             var listener = new TestTraceListener();
             Trace.Listeners.Add(listener);
@@ -48,15 +49,15 @@ namespace Cassandra.Tests
                 const string singleUniqueIp = "127.100.100.101";
                 var ip2 = new IPEndPoint(IPAddress.Parse("127.100.100.100"), 9040);
                 var ip3 = IPAddress.Parse("127.100.100.100");
-                var cluster = Cluster.Builder()
+                var session = await Session.Builder()
                                      .AddContactPoints(ip1, ip1, ip1)
                                      .AddContactPoints(ip2, ip2, ip2)
                                      // IPAddresses are converted to strings so these 3 will be equal to the previous 3
                                      .AddContactPoints(ip3, ip3, ip3)
                                      .AddContactPoint(singleUniqueIp)
-                                     .Build();
+                                     .BuildInternalAsync().ConfigureAwait(false);
 
-                Assert.AreEqual(3, cluster.InternalRef.GetResolvedEndpoints().Count);
+                Assert.AreEqual(3, session.GetResolvedEndpoints().Count);
                 Trace.Flush();
                 Assert.AreEqual(5, listener.Queue.Count(msg => msg.Contains("Found duplicate contact point: 127.100.100.100. Ignoring it.")));
                 Assert.AreEqual(2, listener.Queue.Count(msg => msg.Contains("Found duplicate contact point: 127.100.100.100:9040. Ignoring it.")));
@@ -67,59 +68,58 @@ namespace Cassandra.Tests
                 Diagnostics.CassandraTraceSwitch.Level = originalLevel;
             }
         }
+        
+        [Test]
+        public void BuildThrowsNoHostAvailable()
+        {
+            var builder = Session.Builder()
+                                 .AddContactPoint("127.100.100.100");
+            Assert.ThrowsAsync<NoHostAvailableException>(() => builder.BuildAsync());
+            Assert.Throws<NoHostAvailableException>(() => builder.Build());
+        }
 
         [Test]
-        public void ClusterAllHostsReturnsZeroHostsOnDisconnectedCluster()
+        public void SessionIsDisposedAfterInitError()
         {
             const string ip = "127.100.100.100";
-            var cluster = Cluster.Builder()
-             .AddContactPoint(ip)
-             .Build();
-            //No ring was discovered
-            Assert.AreEqual(0, cluster.AllHosts().Count);
+            var listener = new TestTraceListener();
+            Trace.Listeners.Add(listener);
+            var originalLevel = Diagnostics.CassandraTraceSwitch.Level;
+            Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Warning;
+            var sessionName = Guid.NewGuid().ToString();
+            try
+            {
+                var builder = Session.Builder()
+                                     .AddContactPoint(ip)
+                                     .WithSessionName(sessionName);
+                Assert.Throws<NoHostAvailableException>(() => builder.Build());
+                Trace.Flush();
+                Assert.AreEqual(1, listener.Queue.Count(msg => msg.Contains($"Session [{sessionName}] has been shut down.")));
+            }
+            finally
+            {
+                Trace.Listeners.Remove(listener);
+                Diagnostics.CassandraTraceSwitch.Level = originalLevel;
+            }
         }
 
         [Test]
-        public void ClusterConnectThrowsNoHostAvailable()
-        {
-            var cluster = Cluster.Builder()
-             .AddContactPoint("127.100.100.100")
-             .Build();
-            Assert.Throws<NoHostAvailableException>(() => cluster.Connect());
-            Assert.Throws<NoHostAvailableException>(() => cluster.Connect("sample_ks"));
-        }
-
-        [Test]
-        public void ClusterIsDisposableAfterInitError()
-        {
-            const string ip = "127.100.100.100";
-            var cluster = Cluster.Builder()
-             .AddContactPoint(ip)
-             .Build();
-            Assert.Throws<NoHostAvailableException>(() => cluster.Connect());
-            Assert.DoesNotThrow(cluster.Dispose);
-        }
-
-        [Test]
-        public void Should_Not_Leak_Connections_When_Node_Unreacheable_Test()
+        public void Should_Not_Leak_Connections_When_Node_Unreachable_Test()
         {
             var socketOptions = new SocketOptions().SetReadTimeoutMillis(1).SetConnectTimeoutMillis(1);
-            var builder = Cluster.Builder()
+            var builder = Session.Builder()
                                  .AddContactPoint(TestHelper.UnreachableHostAddress)
                                  .WithSocketOptions(socketOptions);
             const int length = 1000;
-            using (var cluster = builder.Build())
+            decimal initialLength = GC.GetTotalMemory(true);
+            for (var i = 0; i < length; i++)
             {
-                decimal initialLength = GC.GetTotalMemory(true);
-                for (var i = 0; i < length; i++)
-                {
-                    var ex = Assert.Throws<NoHostAvailableException>(() => cluster.Connect());
-                    Assert.AreEqual(1, ex.Errors.Count);
-                }
-                GC.Collect();
-                Assert.Less(GC.GetTotalMemory(true) / initialLength, 1.3M,
-                    "Should not exceed a 20% (1.3) more than was previously allocated");
+                var ex = Assert.ThrowsAsync<NoHostAvailableException>(() => builder.BuildAsync());
+                Assert.AreEqual(1, ex.Errors.Count);
             }
+            GC.Collect();
+            Assert.Less(GC.GetTotalMemory(true) / initialLength, 1.3M,
+                "Should not exceed a 20% (1.3) more than was previously allocated");
         }
 
         static object[] _hostDistanceTestData = new object[]
@@ -198,8 +198,8 @@ namespace Cassandra.Tests
             }
         };
 
-        [Test, TestCaseSource(nameof(ClusterUnitTests._hostDistanceTestData))]
-        public void Should_OnlyDisposePoliciesOnce_When_NoProfileIsProvided(
+        [Test, TestCaseSource(nameof(SessionBuilderTests._hostDistanceTestData))]
+        public async Task Should_OnlyDisposePoliciesOnce_When_NoProfileIsProvided(
             Dictionary<string, HostDistance>[] lbpData, Dictionary<string, HostDistance> expected)
         {
             var lbps = lbpData.Select(lbp => new FakeHostDistanceLbp(lbp)).ToList();
@@ -229,11 +229,11 @@ namespace Cassandra.Tests
                 .Setup(i => i.GetConfiguration())
                 .Returns(testConfig);
             
-            var cluster = Cluster.BuildFrom(initializerMock, new List<string>(), testConfig);
-            cluster.Connect();
-            cluster.Dispose();
+            var session = 
+                await Session.BuildFromAsync(initializerMock, new List<string>(), testConfig).ConfigureAwait(false);
+            await session.ShutdownAsync().ConfigureAwait(false);
 
-            foreach (var h in cluster.AllHosts())
+            foreach (var h in session.AllHosts())
             {
                 Assert.AreEqual(expected[h.Address.Address.ToString()], h.GetDistanceUnsafe());
             }
@@ -242,16 +242,16 @@ namespace Cassandra.Tests
         internal class FakeHostDistanceLbp : ILoadBalancingPolicy
         {
             private readonly IDictionary<string, HostDistance> _distances;
-            private ICluster _cluster;
+            private ISession _session;
 
             public FakeHostDistanceLbp(IDictionary<string, HostDistance> distances)
             {
                 _distances = distances;
             }
 
-            public void Initialize(ICluster cluster)
+            public void Initialize(ISession session)
             {
-                _cluster = cluster;
+                _session = session;
             }
 
             public HostDistance Distance(Host host)
@@ -261,7 +261,7 @@ namespace Cassandra.Tests
 
             public IEnumerable<Host> NewQueryPlan(string keyspace, IStatement query)
             {
-                return _cluster.AllHosts().OrderBy(h => Guid.NewGuid().GetHashCode()).Take(_distances.Count);
+                return _session.AllHosts().OrderBy(h => Guid.NewGuid().GetHashCode()).Take(_distances.Count);
             }
         }
     }

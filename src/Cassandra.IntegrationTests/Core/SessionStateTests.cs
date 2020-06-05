@@ -55,7 +55,7 @@ namespace Cassandra.IntegrationTests.Core
         public async Task Session_GetState_Should_Return_A_Snapshot_Of_The_Pools_State()
         {
             var poolingOptions = PoolingOptions.Create().SetCoreConnectionsPerHost(HostDistance.Local, 2);
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                         .AddContactPoint(_testCluster.InitialContactPoint)
                                         .WithPoolingOptions(poolingOptions)
                                         .Build())
@@ -97,7 +97,7 @@ namespace Cassandra.IntegrationTests.Core
             ISession session;
             ISessionState state;
             ICollection<Host> hosts;
-            using (var cluster = ClusterBuilder()
+            using (var cluster = SessionBuilder()
                                         .AddContactPoint(_testCluster.InitialContactPoint)
                                         .Build())
             {

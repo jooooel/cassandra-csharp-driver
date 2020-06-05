@@ -45,7 +45,7 @@ namespace Cassandra.IntegrationTests.DataStax.Insights
 
         private Cluster BuildCluster(SimulacronCluster simulacronCluster, int statusEventDelay)
         {
-            return ClusterBuilder()
+            return SessionBuilder()
                           .AddContactPoint(simulacronCluster.InitialContactPoint)
                           .WithApplicationName(InsightsIntegrationTests.applicationName)
                           .WithApplicationVersion(InsightsIntegrationTests.applicationVersion)

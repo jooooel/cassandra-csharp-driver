@@ -233,7 +233,7 @@ namespace Cassandra.IntegrationTests
         
         protected void SetupNewSession(Func<Builder, Builder> builderConfig = null)
         {
-            var builder = ClusterBuilder();
+            var builder = SessionBuilder();
             builderConfig?.Invoke(builder);
             var session = builder.AddContactPoint(TestCluster.InitialContactPoint).Build().Connect();
             Session?.Cluster?.Dispose();
@@ -242,7 +242,7 @@ namespace Cassandra.IntegrationTests
 
         protected virtual ISession CreateSession()
         {
-            return ConfigBuilder(ClusterBuilder()).AddContactPoint(TestCluster.InitialContactPoint).Build().Connect();
+            return ConfigBuilder(SessionBuilder()).AddContactPoint(TestCluster.InitialContactPoint).Build().Connect();
         }
 
         protected virtual Builder ConfigBuilder(Builder b)

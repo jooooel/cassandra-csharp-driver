@@ -49,7 +49,7 @@ namespace Cassandra.Tests
             {
                 RequestHandlerFactory = requestHandlerFactory
             }.Build();
-            Mock.Get(mockSession).SetupGet(m => m.Cluster.Configuration).Returns(config);
+            Mock.Get(mockSession).SetupGet(m => m.Configuration).Returns(config);
             var mockRequest = Mock.Of<IRequest>();
             var mockRequestExecution = Mock.Of<IRequestHandler>();
             Mock.Get(mockRequestExecution)
@@ -77,7 +77,7 @@ namespace Cassandra.Tests
             {
                 RequestHandlerFactory = requestHandlerFactory
             }.Build();
-            Mock.Get(mockSession).SetupGet(m => m.Cluster.Configuration).Returns(config);
+            Mock.Get(mockSession).SetupGet(m => m.Configuration).Returns(config);
             var mockRequest = Mock.Of<IRequest>();
             var mockRequestExecution = Mock.Of<IRequestHandler>();
             var host = new Host(
@@ -112,7 +112,7 @@ namespace Cassandra.Tests
             {
                 RequestHandlerFactory = requestHandlerFactory
             }.Build();
-            Mock.Get(mockSession).SetupGet(m => m.Cluster.Configuration).Returns(config);
+            Mock.Get(mockSession).SetupGet(m => m.Configuration).Returns(config);
             var mockRequest = Mock.Of<IRequest>();
             var mockParent = Mock.Of<IRequestHandler>();
             var connection = Mock.Of<IConnection>();
@@ -161,7 +161,7 @@ namespace Cassandra.Tests
             {
                 RequestHandlerFactory = requestHandlerFactory
             }.Build();
-            Mock.Get(mockSession).SetupGet(m => m.Cluster.Configuration).Returns(config);
+            Mock.Get(mockSession).SetupGet(m => m.Configuration).Returns(config);
             var mockRequest = Mock.Of<IRequest>();
             var mockParent = Mock.Of<IRequestHandler>();
             var connection = Mock.Of<IConnection>();

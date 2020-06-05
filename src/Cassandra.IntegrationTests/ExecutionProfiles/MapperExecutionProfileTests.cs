@@ -50,7 +50,7 @@ namespace Cassandra.IntegrationTests.ExecutionProfiles
             _keyspace = TestUtils.GetUniqueKeyspaceName().ToLowerInvariant();
 
             _simulacronCluster = SimulacronCluster.CreateNew(3);
-            _session = ClusterBuilder()
+            _session = SessionBuilder()
                               .AddContactPoint(_simulacronCluster.InitialContactPoint)
                               .WithExecutionProfiles(opts => opts
                                   .WithProfile("testProfile", profile => profile

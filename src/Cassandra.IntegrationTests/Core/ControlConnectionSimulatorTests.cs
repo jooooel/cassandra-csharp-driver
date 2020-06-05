@@ -48,7 +48,7 @@ namespace Cassandra.IntegrationTests.Core
                                                                   params string[] cassandraVersions)
         {
             using (var testCluster = SimulacronCluster.CreateNewWithPostBody(GetSimulatorBody(cassandraVersions)))
-            using (var cluster = ClusterBuilder().AddContactPoint(testCluster.InitialContactPoint).Build())
+            using (var cluster = SessionBuilder().AddContactPoint(testCluster.InitialContactPoint).Build())
             {
                 if (version > ProtocolVersion.V2)
                 {
@@ -79,7 +79,7 @@ namespace Cassandra.IntegrationTests.Core
         public void Should_Not_Downgrade_Protocol_Version(ProtocolVersion version, params string[] cassandraVersions)
         {
             using (var testCluster = SimulacronCluster.CreateNewWithPostBody(GetSimulatorBody(cassandraVersions)))
-            using (var cluster = ClusterBuilder().WithBetaProtocolVersions().AddContactPoint(testCluster.InitialContactPoint).Build())
+            using (var cluster = SessionBuilder().WithBetaProtocolVersions().AddContactPoint(testCluster.InitialContactPoint).Build())
             {
                 var session = cluster.Connect();
                 Parallel.For(0, 10, _ => session.Execute("SELECT * FROM system.local"));
@@ -101,7 +101,7 @@ namespace Cassandra.IntegrationTests.Core
                     arr[3] += i;
                     contactPoints[i] = new IPEndPoint(new IPAddress(arr), port);
                 }
-                var builder = ClusterBuilder().AddContactPoints(contactPoints);
+                var builder = SessionBuilder().AddContactPoints(contactPoints);
                 var index = 0;
                 await TestHelper.TimesLimit(async () =>
                 {

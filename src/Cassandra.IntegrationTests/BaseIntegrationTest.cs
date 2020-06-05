@@ -79,7 +79,7 @@ namespace Cassandra.IntegrationTests
         /// </summary>
         public void CreateClassicGraph(string contactPoint, string name)
         {
-            using (var cluster = ClusterBuilder().AddContactPoint(TestClusterManager.InitialContactPoint).Build())
+            using (var cluster = SessionBuilder().AddContactPoint(TestClusterManager.InitialContactPoint).Build())
             {
                 CreateClassicGraph(cluster.Connect(), name);
             }

@@ -91,7 +91,7 @@ namespace Cassandra.SessionManagement
         /// parallel.
         /// In case the statement was already in the prepared statements cache, logs an warning but prepares it anyway.
         /// </summary>
-        Task<PreparedStatement> Prepare(IInternalSession session, ISerializerManager serializerManager, PrepareRequest request);
+        Task<PreparedStatement> PrepareInternal(ISerializerManager serializerManager, PrepareRequest request);
         
         /// <summary>
         /// Gets the the prepared statements cache
@@ -115,5 +115,7 @@ namespace Cassandra.SessionManagement
         /// as an implicit contact point.
         /// </summary>
         bool ImplicitContactPoint { get; }
+
+        IReadOnlyDictionary<IContactPoint, IEnumerable<IConnectionEndPoint>> GetResolvedEndpoints();
     }
 }

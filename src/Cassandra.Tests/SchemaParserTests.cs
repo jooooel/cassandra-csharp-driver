@@ -55,10 +55,8 @@ namespace Cassandra.Tests
         /// </summary>
         private static QueryTrace GetQueryTrace()
         {
-            var clusterMock = new Mock<ICluster>();
-            clusterMock.Setup(c => c.Configuration).Returns(new Configuration());
             var sessionMock = new Mock<ISession>(MockBehavior.Strict);
-            sessionMock.Setup(s => s.Cluster).Returns(clusterMock.Object);
+            sessionMock.Setup(c => c.Configuration).Returns(new Configuration());
             return new QueryTrace(Guid.NewGuid(), sessionMock.Object);
         }
 

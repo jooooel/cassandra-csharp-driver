@@ -32,8 +32,8 @@ namespace Cassandra.Tests.ExecutionProfiles
             var lbpGraph = new RoundRobinPolicy();
             var sepGraph = new ConstantSpeculativeExecutionPolicy(2000, 1);
             var rpGraph = new LoggingRetryPolicy(new DefaultRetryPolicy());
-            var cluster = 
-                Cluster
+            var session = 
+                Session
                     .Builder()
                     .AddContactPoint("127.0.0.1")
                     .WithExecutionProfiles(opts =>
@@ -56,8 +56,8 @@ namespace Cassandra.Tests.ExecutionProfiles
                     })
                     .Build();
 
-            Assert.AreEqual(3, cluster.Configuration.RequestOptions.Count);
-            var options = cluster.Configuration.RequestOptions["test1"];
+            Assert.AreEqual(3, session.Configuration.RequestOptions.Count);
+            var options = session.Configuration.RequestOptions["test1"];
             Assert.AreEqual(ConsistencyLevel.EachQuorum, options.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.LocalSerial, options.SerialConsistencyLevel);
             Assert.AreEqual(9999, options.ReadTimeoutMillis);
@@ -65,7 +65,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             Assert.AreSame(sep, options.SpeculativeExecutionPolicy);
             Assert.AreSame(rp, options.RetryPolicy);
 
-            var graphOptions = cluster.Configuration.RequestOptions["test1graph"];
+            var graphOptions = session.Configuration.RequestOptions["test1graph"];
             Assert.AreEqual(ConsistencyLevel.All, graphOptions.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.Serial, graphOptions.SerialConsistencyLevel);
             Assert.AreEqual(5555, graphOptions.ReadTimeoutMillis);
@@ -82,8 +82,8 @@ namespace Cassandra.Tests.ExecutionProfiles
             var lbp = new RoundRobinPolicy();
             var sep = new ConstantSpeculativeExecutionPolicy(1000, 1);
             var rp = new LoggingRetryPolicy(new DefaultRetryPolicy());
-            var cluster = 
-                Cluster
+            var session = 
+                Session
                     .Builder()
                     .AddContactPoint("127.0.0.1")
                     .WithSocketOptions(new SocketOptions().SetReadTimeoutMillis(3000))
@@ -100,8 +100,8 @@ namespace Cassandra.Tests.ExecutionProfiles
                     })
                     .Build();
 
-            Assert.AreEqual(1, cluster.Configuration.RequestOptions.Count);
-            var options = cluster.Configuration.RequestOptions["default"];
+            Assert.AreEqual(1, session.Configuration.RequestOptions.Count);
+            var options = session.Configuration.RequestOptions["default"];
             Assert.AreEqual(ConsistencyLevel.EachQuorum, options.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.LocalSerial, options.SerialConsistencyLevel);
             Assert.AreEqual(9999, options.ReadTimeoutMillis);
@@ -119,7 +119,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             var sep = new ConstantSpeculativeExecutionPolicy(1000, 1);
             var rp = new LoggingRetryPolicy(new DefaultRetryPolicy());
             var tg = new AtomicMonotonicTimestampGenerator();
-            var cluster = Cluster
+            var session = Session
                           .Builder()
                           .AddContactPoint("127.0.0.1")
                           .WithQueryOptions(
@@ -144,8 +144,8 @@ namespace Cassandra.Tests.ExecutionProfiles
                           .WithGraphOptions(go)
                           .Build();
 
-            Assert.AreEqual(3, cluster.Configuration.RequestOptions.Count);
-            var options = cluster.Configuration.RequestOptions["test1"];
+            Assert.AreEqual(3, session.Configuration.RequestOptions.Count);
+            var options = session.Configuration.RequestOptions["test1"];
             Assert.AreEqual(ConsistencyLevel.EachQuorum, options.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.LocalSerial, options.SerialConsistencyLevel);
             Assert.AreEqual(9999, options.ReadTimeoutMillis);
@@ -158,7 +158,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             Assert.AreSame(tg, options.TimestampGenerator);
             Assert.AreSame(go, options.GraphOptions);
 
-            var graphOptions = cluster.Configuration.RequestOptions["test1Graph"];
+            var graphOptions = session.Configuration.RequestOptions["test1Graph"];
             Assert.AreEqual(ConsistencyLevel.EachQuorum, graphOptions.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.LocalSerial, graphOptions.SerialConsistencyLevel);
             Assert.AreEqual(9999, graphOptions.ReadTimeoutMillis);
@@ -183,7 +183,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             var rpProfile = new LoggingRetryPolicy(new IdempotenceAwareRetryPolicy(new DefaultRetryPolicy()));
             var goProfile = new GraphOptions();
             var tg = new AtomicMonotonicTimestampGenerator();
-            var cluster = Cluster
+            var session = Session
                           .Builder()
                           .AddContactPoint("127.0.0.1")
                           .WithQueryOptions(
@@ -212,8 +212,8 @@ namespace Cassandra.Tests.ExecutionProfiles
                           .WithGraphOptions(go)
                           .Build();
 
-            Assert.AreEqual(3, cluster.Configuration.RequestOptions.Count);
-            var options = cluster.Configuration.RequestOptions["test1"];
+            Assert.AreEqual(3, session.Configuration.RequestOptions.Count);
+            var options = session.Configuration.RequestOptions["test1"];
             Assert.AreEqual(ConsistencyLevel.Quorum, options.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.Serial, options.SerialConsistencyLevel);
             Assert.AreEqual(300, options.ReadTimeoutMillis);
@@ -226,7 +226,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             Assert.AreSame(tg, options.TimestampGenerator);
             Assert.AreSame(goProfile, options.GraphOptions);
 
-            var graphOptions = cluster.Configuration.RequestOptions["test1Graph"];
+            var graphOptions = session.Configuration.RequestOptions["test1Graph"];
             Assert.AreEqual(ConsistencyLevel.LocalQuorum, graphOptions.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.Serial, graphOptions.SerialConsistencyLevel);
             Assert.AreEqual(5000, graphOptions.ReadTimeoutMillis);
@@ -251,7 +251,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             var rpProfile = new LoggingRetryPolicy(new IdempotenceAwareRetryPolicy(new DefaultRetryPolicy()));
             var rpGraph = new LoggingRetryPolicy(new DefaultRetryPolicy());
             var tg = new AtomicMonotonicTimestampGenerator();
-            var cluster = Cluster
+            var session = Session
                           .Builder()
                           .AddContactPoint("127.0.0.1")
                           .WithQueryOptions(
@@ -289,8 +289,8 @@ namespace Cassandra.Tests.ExecutionProfiles
                           .WithGraphOptions(new GraphOptions())
                           .Build();
 
-            Assert.AreEqual(5, cluster.Configuration.RequestOptions.Count);
-            var options = cluster.Configuration.RequestOptions["test1"];
+            Assert.AreEqual(5, session.Configuration.RequestOptions.Count);
+            var options = session.Configuration.RequestOptions["test1"];
             Assert.AreEqual(ConsistencyLevel.All, options.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.LocalSerial, options.SerialConsistencyLevel);
             Assert.AreEqual(5, options.ReadTimeoutMillis);
@@ -302,7 +302,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             Assert.AreEqual(30, options.QueryAbortTimeout);
             Assert.AreSame(tg, options.TimestampGenerator);
             
-            var graphOptions = cluster.Configuration.RequestOptions["test1Graph"];
+            var graphOptions = session.Configuration.RequestOptions["test1Graph"];
             Assert.AreEqual(ConsistencyLevel.Two, graphOptions.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.Serial, graphOptions.SerialConsistencyLevel);
             Assert.AreEqual(5, graphOptions.ReadTimeoutMillis);
@@ -314,8 +314,8 @@ namespace Cassandra.Tests.ExecutionProfiles
             Assert.AreEqual(30, graphOptions.QueryAbortTimeout);
             Assert.AreSame(tg, graphOptions.TimestampGenerator);
             Assert.AreSame(go, graphOptions.GraphOptions);
-            Assert.IsNotNull(cluster.Configuration.GraphOptions);
-            Assert.AreNotSame(graphOptions.GraphOptions, cluster.Configuration.GraphOptions);
+            Assert.IsNotNull(session.Configuration.GraphOptions);
+            Assert.AreNotSame(graphOptions.GraphOptions, session.Configuration.GraphOptions);
         }
         
         [Test]
@@ -326,7 +326,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             var sep = new ConstantSpeculativeExecutionPolicy(1000, 1);
             var rp = new LoggingRetryPolicy(new DefaultRetryPolicy());
             var tg = new AtomicMonotonicTimestampGenerator();
-            var cluster = Cluster
+            var session = Session
                           .Builder()
                           .AddContactPoint("127.0.0.1")
                           .WithQueryOptions(
@@ -347,8 +347,8 @@ namespace Cassandra.Tests.ExecutionProfiles
                           .WithGraphOptions(go)
                           .Build();
 
-            Assert.AreEqual(1, cluster.Configuration.RequestOptions.Count);
-            var options = cluster.Configuration.RequestOptions["default"];
+            Assert.AreEqual(1, session.Configuration.RequestOptions.Count);
+            var options = session.Configuration.RequestOptions["default"];
             Assert.AreEqual(ConsistencyLevel.EachQuorum, options.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.LocalSerial, options.SerialConsistencyLevel);
             Assert.AreEqual(9999, options.ReadTimeoutMillis);
@@ -370,7 +370,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             var sep = new ConstantSpeculativeExecutionPolicy(1000, 1);
             var rp = new LoggingRetryPolicy(new DefaultRetryPolicy());
             var tg = new AtomicMonotonicTimestampGenerator();
-            var cluster = Cluster
+            var session = Session
                           .Builder()
                           .AddContactPoint("127.0.0.1")
                           .WithQueryOptions(
@@ -390,8 +390,8 @@ namespace Cassandra.Tests.ExecutionProfiles
                           .WithGraphOptions(go)
                           .Build();
 
-            Assert.AreEqual(1, cluster.Configuration.RequestOptions.Count);
-            var options = cluster.Configuration.RequestOptions["default"];
+            Assert.AreEqual(1, session.Configuration.RequestOptions.Count);
+            var options = session.Configuration.RequestOptions["default"];
             Assert.AreEqual(ConsistencyLevel.EachQuorum, options.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.LocalSerial, options.SerialConsistencyLevel);
             Assert.AreEqual(9999, options.ReadTimeoutMillis);
@@ -411,7 +411,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             var lbp = new RoundRobinPolicy();
             var sep = new ConstantSpeculativeExecutionPolicy(1000, 1);
             var rp = new LoggingRetryPolicy(new DefaultRetryPolicy());
-            var cluster = Cluster.Builder().AddContactPoint("127.0.0.1").WithExecutionProfiles(opts =>
+            var session = Session.Builder().AddContactPoint("127.0.0.1").WithExecutionProfiles(opts =>
             {
                 opts.WithProfile("test1", profile => profile
                                                      .WithConsistencyLevel(ConsistencyLevel.EachQuorum)
@@ -430,7 +430,7 @@ namespace Cassandra.Tests.ExecutionProfiles
                                                      .WithGraphOptions(go));
             }).Build();
 
-            var execProfile = cluster.Configuration.ExecutionProfiles["test1"];
+            var execProfile = session.Configuration.ExecutionProfiles["test1"];
             Assert.AreEqual(ConsistencyLevel.EachQuorum, execProfile.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.LocalSerial, execProfile.SerialConsistencyLevel);
             Assert.AreEqual(9999, execProfile.ReadTimeoutMillis);
@@ -439,7 +439,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             Assert.AreSame(rp, execProfile.RetryPolicy);
             Assert.IsNull(execProfile.GraphOptions);
             
-            var graphExecProfile = cluster.Configuration.ExecutionProfiles["test1Graph"];
+            var graphExecProfile = session.Configuration.ExecutionProfiles["test1Graph"];
             Assert.AreEqual(ConsistencyLevel.EachQuorum, graphExecProfile.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.LocalSerial, graphExecProfile.SerialConsistencyLevel);
             Assert.AreEqual(9999, graphExecProfile.ReadTimeoutMillis);
@@ -456,7 +456,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             var lbp = new RoundRobinPolicy();
             var sep = new ConstantSpeculativeExecutionPolicy(1000, 1);
             var rp = new LoggingRetryPolicy(new DefaultRetryPolicy());
-            var cluster = Cluster.Builder().AddContactPoint("127.0.0.1").WithExecutionProfiles(opts =>
+            var session = Session.Builder().AddContactPoint("127.0.0.1").WithExecutionProfiles(opts =>
             {
                 opts.WithProfile("default", profile => profile
                                                      .WithConsistencyLevel(ConsistencyLevel.EachQuorum)
@@ -468,7 +468,7 @@ namespace Cassandra.Tests.ExecutionProfiles
                                                      .WithGraphOptions(go));
             }).Build();
 
-            var execProfile = cluster.Configuration.ExecutionProfiles["default"];
+            var execProfile = session.Configuration.ExecutionProfiles["default"];
             Assert.AreEqual(ConsistencyLevel.EachQuorum, execProfile.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.LocalSerial, execProfile.SerialConsistencyLevel);
             Assert.AreEqual(9999, execProfile.ReadTimeoutMillis);
@@ -486,7 +486,7 @@ namespace Cassandra.Tests.ExecutionProfiles
             var sep = new ConstantSpeculativeExecutionPolicy(1000, 1);
             var rp = new LoggingRetryPolicy(new DefaultRetryPolicy());
             var tg = new AtomicMonotonicTimestampGenerator();
-            var cluster = Cluster
+            var session = Session
                           .Builder()
                           .AddContactPoint("127.0.0.1")
                           .WithQueryOptions(
@@ -506,8 +506,8 @@ namespace Cassandra.Tests.ExecutionProfiles
                           .WithGraphOptions(go)
                           .Build();
 
-            Assert.AreEqual(1, cluster.Configuration.RequestOptions.Count);
-            var profile = cluster.Configuration.ExecutionProfiles["default"];
+            Assert.AreEqual(1, session.Configuration.RequestOptions.Count);
+            var profile = session.Configuration.ExecutionProfiles["default"];
             Assert.AreEqual(ConsistencyLevel.EachQuorum, profile.ConsistencyLevel);
             Assert.AreEqual(ConsistencyLevel.LocalSerial, profile.SerialConsistencyLevel);
             Assert.AreEqual(9999, profile.ReadTimeoutMillis);
@@ -526,8 +526,8 @@ namespace Cassandra.Tests.ExecutionProfiles
             var sep2 = new ConstantSpeculativeExecutionPolicy(1000, 1);
             var retryPolicy = new DefaultRetryPolicy();
             var retryPolicy2 = new DefaultRetryPolicy();
-            var cluster =
-                Cluster.Builder()
+            var session =
+                Session.Builder()
                        .AddContactPoint("127.0.0.1")
                        .WithLoadBalancingPolicy(lbp1)
                        .WithSpeculativeExecutionPolicy(sep1)
@@ -548,13 +548,13 @@ namespace Cassandra.Tests.ExecutionProfiles
                                    .WithReadTimeoutMillis(4412)))
                        .Build();
 
-            Assert.AreSame(retryPolicy2, cluster.Configuration.Policies.ExtendedRetryPolicy);
-            Assert.AreSame(retryPolicy2, cluster.Configuration.Policies.RetryPolicy);
-            Assert.AreSame(sep2, cluster.Configuration.Policies.SpeculativeExecutionPolicy);
-            Assert.AreSame(lbp2, cluster.Configuration.Policies.LoadBalancingPolicy);
-            Assert.AreEqual(4412, cluster.Configuration.SocketOptions.ReadTimeoutMillis);
-            Assert.AreEqual(ConsistencyLevel.Quorum, cluster.Configuration.QueryOptions.GetConsistencyLevel());
-            Assert.AreEqual(ConsistencyLevel.Serial, cluster.Configuration.QueryOptions.GetSerialConsistencyLevel());
+            Assert.AreSame(retryPolicy2, session.Configuration.Policies.ExtendedRetryPolicy);
+            Assert.AreSame(retryPolicy2, session.Configuration.Policies.RetryPolicy);
+            Assert.AreSame(sep2, session.Configuration.Policies.SpeculativeExecutionPolicy);
+            Assert.AreSame(lbp2, session.Configuration.Policies.LoadBalancingPolicy);
+            Assert.AreEqual(4412, session.Configuration.SocketOptions.ReadTimeoutMillis);
+            Assert.AreEqual(ConsistencyLevel.Quorum, session.Configuration.QueryOptions.GetConsistencyLevel());
+            Assert.AreEqual(ConsistencyLevel.Serial, session.Configuration.QueryOptions.GetSerialConsistencyLevel());
         }
     }
 }

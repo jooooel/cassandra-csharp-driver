@@ -35,7 +35,7 @@ namespace Cassandra.IntegrationTests.Policies.Tests
         [Test]
         public void RetryPolicy_DowngradingConsistency()
         {
-            Builder builder = ClusterBuilder().WithRetryPolicy(DowngradingConsistencyRetryPolicy.Instance);
+            Builder builder = SessionBuilder().WithRetryPolicy(DowngradingConsistencyRetryPolicy.Instance);
             DowngradingConsistencyRetryPolicyTest(builder);
         }
 
@@ -47,7 +47,7 @@ namespace Cassandra.IntegrationTests.Policies.Tests
         [Test]
         public void LoggingRetryPolicy_DowngradingConsistency()
         {
-            Builder builder = ClusterBuilder().WithRetryPolicy(new LoggingRetryPolicy(DowngradingConsistencyRetryPolicy.Instance));
+            Builder builder = SessionBuilder().WithRetryPolicy(new LoggingRetryPolicy(DowngradingConsistencyRetryPolicy.Instance));
             DowngradingConsistencyRetryPolicyTest(builder);
         }
 
@@ -93,7 +93,7 @@ namespace Cassandra.IntegrationTests.Policies.Tests
         {
 
             ITestCluster testCluster = TestClusterManager.GetNonShareableTestCluster(2);
-            testCluster.Builder = ClusterBuilder()
+            testCluster.Builder = SessionBuilder()
                                          .WithRetryPolicy(new LoggingRetryPolicy(AlwaysIgnoreRetryPolicy.Instance))
                                          .AddContactPoint(testCluster.ClusterIpPrefix + "1")
                                          .AddContactPoint(testCluster.ClusterIpPrefix + "2");
@@ -110,7 +110,7 @@ namespace Cassandra.IntegrationTests.Policies.Tests
         public void AlwaysRetryRetryPolicyTest()
         {
             ITestCluster testCluster = TestClusterManager.GetNonShareableTestCluster(2);
-            testCluster.Builder = ClusterBuilder()
+            testCluster.Builder = SessionBuilder()
                                          .WithRetryPolicy(new LoggingRetryPolicy(AlwaysRetryRetryPolicy.Instance))
                                          .AddContactPoint(testCluster.ClusterIpPrefix + "1")
                                          .AddContactPoint(testCluster.ClusterIpPrefix + "2");
@@ -141,7 +141,7 @@ namespace Cassandra.IntegrationTests.Policies.Tests
         {
             ITestCluster testCluster = TestClusterManager.GetNonShareableTestCluster(2);
             var socketOptions = new SocketOptions().SetReadTimeoutMillis(2000);
-            testCluster.Builder = ClusterBuilder()
+            testCluster.Builder = SessionBuilder()
                                          .WithRetryPolicy(new LoggingRetryPolicy(TryNextHostRetryPolicy.Instance))
                                          .AddContactPoint(testCluster.ClusterIpPrefix + "1")
                                          .AddContactPoint(testCluster.ClusterIpPrefix + "2")

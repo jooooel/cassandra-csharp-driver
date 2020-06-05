@@ -50,7 +50,7 @@ namespace Cassandra.IntegrationTests.ExecutionProfiles
         public void Should_UseDerivedProfileConsistency_When_DerivedProfileIsProvided(bool async)
         {
             using (var cluster =
-                ClusterBuilder()
+                SessionBuilder()
                        .AddContactPoint(_simulacron.InitialContactPoint)
                        .WithQueryOptions(new QueryOptions().SetConsistencyLevel(ConsistencyLevel.One))
                        .WithExecutionProfiles(opts => opts
@@ -79,7 +79,7 @@ namespace Cassandra.IntegrationTests.ExecutionProfiles
         public async Task Should_UseProfileConsistency_When_ProfileIsProvided(bool async)
         {
             using (var cluster =
-                ClusterBuilder()
+                SessionBuilder()
                        .AddContactPoint(_simulacron.InitialContactPoint)
                        .WithQueryOptions(new QueryOptions().SetConsistencyLevel(ConsistencyLevel.One))
                        .WithExecutionProfiles(opts => opts
@@ -112,7 +112,7 @@ namespace Cassandra.IntegrationTests.ExecutionProfiles
         public async Task Should_UseClusterConsistency_When_ProfileIsNotProvided(bool async)
         {
             using (var cluster =
-                ClusterBuilder()
+                SessionBuilder()
                        .AddContactPoint(_simulacron.InitialContactPoint)
                        .WithQueryOptions(new QueryOptions().SetConsistencyLevel(ConsistencyLevel.One))
                        .WithExecutionProfiles(opts => opts
@@ -152,7 +152,7 @@ namespace Cassandra.IntegrationTests.ExecutionProfiles
         public async Task Should_UseDefaultProfileConsistency_When_ProfileIsNotProvidedButDefaultProfileWasChanged(bool async)
         {
             using (var cluster =
-                ClusterBuilder()
+                SessionBuilder()
                        .AddContactPoint(_simulacron.InitialContactPoint)
                        .WithQueryOptions(new QueryOptions().SetConsistencyLevel(ConsistencyLevel.One))
                        .WithExecutionProfiles(opts => opts

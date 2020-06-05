@@ -16,7 +16,9 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net;
+using System.Threading.Tasks;
 using Cassandra.Serialization;
 using Cassandra.SessionManagement;
 using Cassandra.Tests.Connections.TestHelpers;
@@ -29,14 +31,14 @@ namespace Cassandra.Tests
     public class SessionTests
     {
         [Test]
-        public void Should_GenerateNewSessionId_When_SessionIsCreated()
+        public async Task Should_GenerateNewSessionId_When_SessionIsCreated()
         {
             var sessionNames = new ConcurrentQueue<string>();
             var sessionFactoryMock = Mock.Of<ISessionFactory>();
             Mock.Get(sessionFactoryMock).Setup(s =>
-                    s.CreateSessionAsync(It.IsAny<IInternalCluster>(), It.IsAny<string>(), It.IsAny<ISerializerManager>(), It.IsAny<string>()))
+                    s.CreateSessionAsync(It.IsAny<IEnumerable<object>>(), It.IsAny<Configuration>(), It.IsAny<string>()))
                 .ReturnsAsync(Mock.Of<IInternalSession>())
-                .Callback<IInternalCluster, string, ISerializerManager, string>((c, ks, serializer, name) => { sessionNames.Enqueue(name); });
+                .Callback<IInternalSession, string, ISerializerManager, string>((c, ks, serializer, name) => { sessionNames.Enqueue(name); });
 
             var config = new TestConfigurationBuilder
             {
@@ -52,15 +54,18 @@ namespace Cassandra.Tests
             var initializer = Mock.Of<IInitializer>();
             Mock.Get(initializer).Setup(i => i.ContactPoints).Returns(new IPEndPoint[0]);
             Mock.Get(initializer).Setup(i => i.GetConfiguration()).Returns(config);
-            using (var cluster = Cluster.BuildFrom(initializer, new[] { "127.0.0.1" }, config))
+            using (var _ = await Session.BuildFromAsync(
+                initializer, new[] { "127.0.0.1" }, config).ConfigureAwait(false))
             {
-                var target = cluster.Connect();
                 Assert.IsTrue(sessionNames.TryDequeue(out var sessionId));
-                var newTarget = cluster.Connect();
-                Assert.IsTrue(sessionNames.TryDequeue(out var newSessionId));
-                Assert.AreEqual(0, sessionNames.Count);
-                Assert.AreNotEqual(Guid.Empty, sessionId);
-                Assert.AreNotEqual(sessionId, newSessionId);
+                using (var __ = await Session.BuildFromAsync(
+                    initializer, new[] { "127.0.0.1" }, config).ConfigureAwait(false))
+                {
+                    Assert.IsTrue(sessionNames.TryDequeue(out var newSessionId));
+                    Assert.AreEqual(0, sessionNames.Count);
+                    Assert.AreNotEqual(Guid.Empty, sessionId);
+                    Assert.AreNotEqual(sessionId, newSessionId);
+                }
             }
         }
     }

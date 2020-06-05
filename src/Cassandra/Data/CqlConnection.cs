@@ -56,7 +56,7 @@ namespace Cassandra.Data
             _connectionStringBuilder = new CassandraConnectionStringBuilder(connectionString);
         }
 
-        protected internal ISession ManagedConnection { get; private set; }
+        protected internal ISession ManagedConnection { get; internal set; }
 
         internal void ClearDbTransaction()
         {

@@ -14,6 +14,7 @@
 //   limitations under the License.
 // 
 
+using System;
 using System.Linq;
 using NUnit.Framework;
 
@@ -126,6 +127,31 @@ namespace Cassandra.Tests
                                                                                   params string[] cassandraVersions)
         {
             Assert.AreEqual(version, version.GetHighestCommon(_config, cassandraVersions.Select(GetHost)));
+        }
+        
+        [TestCase(ProtocolVersion.MaxSupported, "DseV2")]
+        [TestCase(ProtocolVersion.MinSupported, "V1")]
+        public void GetStringRepresentation_Should_ReturnCorrectVersion_When_MaxOrMinSupported(
+            ProtocolVersion version, string versionString)
+        {
+            Assert.AreEqual(versionString, version.GetStringRepresentation());
+        }
+        
+        [Test]
+        public void GetStringRepresentation_Should_ReturnCorrectVersion_When_NotMaxOrMinSupported()
+        {
+            var versionNames = Enum.GetNames(typeof(ProtocolVersion));
+            var notMaxOrMinVersionNames = versionNames.Where(name => name.ToLowerInvariant().Contains("support")).ToList();
+            
+            Assert.AreEqual(5, notMaxOrMinVersionNames);
+            Assert.AreEqual(7, versionNames);
+
+            var values = notMaxOrMinVersionNames.Select(s => new Tuple<string, ProtocolVersion>(
+                s, (ProtocolVersion)Enum.Parse(typeof(ProtocolVersion), s)));
+            foreach (var v in values)
+            {
+                Assert.AreEqual(v.Item1, v.Item2.GetStringRepresentation());
+            }
         }
 
         private static Host GetHost(string cassandraVersion, int index)

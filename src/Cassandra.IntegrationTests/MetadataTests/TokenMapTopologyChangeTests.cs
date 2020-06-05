@@ -31,8 +31,10 @@ namespace Cassandra.IntegrationTests.MetadataTests
     public class TokenMapTopologyChangeTests : TestGlobals
     {
         private ITestCluster TestCluster { get; set; }
-        private ICluster ClusterObjSync { get; set; }
-        private ICluster ClusterObjNotSync { get; set; }
+
+        private ISession SessionObjSync { get; set; }
+
+        private ISession SessionObjNotSync { get; set; }
 
         [Test]
         public void TokenMap_Should_RebuildTokenMap_When_NodeIsDecommissioned()
@@ -45,47 +47,44 @@ namespace Cassandra.IntegrationTests.MetadataTests
             {
                 TestCluster = TestClusterManager.CreateNew(3, new TestClusterOptions { UseVNodes = true });
                 var keyspaceName = TestUtils.GetUniqueKeyspaceName().ToLower();
-                ClusterObjSync = ClusterBuilder()
+                SessionObjSync = SessionBuilder()
                                         .AddContactPoint(TestCluster.InitialContactPoint)
                                         .WithMetadataSyncOptions(new MetadataSyncOptions().SetMetadataSyncEnabled(true))
                                         .WithReconnectionPolicy(new ConstantReconnectionPolicy(5000))
                                         .Build();
 
-                ClusterObjNotSync = ClusterBuilder()
+                SessionObjNotSync = SessionBuilder()
                                            .AddContactPoint(TestCluster.InitialContactPoint)
                                            .WithMetadataSyncOptions(new MetadataSyncOptions().SetMetadataSyncEnabled(false))
                                            .WithReconnectionPolicy(new ConstantReconnectionPolicy(5000))
                                            .Build();
-
-                var sessionNotSync = ClusterObjNotSync.Connect();
-                var sessionSync = ClusterObjSync.Connect();
-
+                
                 var createKeyspaceCql = $"CREATE KEYSPACE {keyspaceName} WITH replication = {{'class': 'SimpleStrategy', 'replication_factor' : 3}}";
-                sessionNotSync.Execute(createKeyspaceCql);
+                SessionObjNotSync.Execute(createKeyspaceCql);
 
-                TestUtils.WaitForSchemaAgreement(ClusterObjNotSync);
-                TestUtils.WaitForSchemaAgreement(ClusterObjSync);
+                TestUtils.WaitForSchemaAgreement(SessionObjNotSync);
+                TestUtils.WaitForSchemaAgreement(SessionObjSync);
 
-                sessionNotSync.ChangeKeyspace(keyspaceName);
-                sessionSync.ChangeKeyspace(keyspaceName);
+                SessionObjNotSync.ChangeKeyspace(keyspaceName);
+                SessionObjSync.ChangeKeyspace(keyspaceName);
 
                 ICollection<Host> replicasSync = null;
                 ICollection<Host> replicasNotSync = null;
 
                 TestHelper.RetryAssert(() =>
                 {
-                    Assert.AreEqual(3, ClusterObjSync.Metadata.Hosts.Count);
-                    Assert.AreEqual(3, ClusterObjNotSync.Metadata.Hosts.Count);
+                    Assert.AreEqual(3, SessionObjSync.Metadata.Hosts.Count);
+                    Assert.AreEqual(3, SessionObjNotSync.Metadata.Hosts.Count);
 
-                    replicasSync = ClusterObjSync.Metadata.GetReplicas(keyspaceName, Encoding.UTF8.GetBytes("123"));
-                    replicasNotSync = ClusterObjNotSync.Metadata.GetReplicas(keyspaceName, Encoding.UTF8.GetBytes("123"));
+                    replicasSync = SessionObjSync.Metadata.GetReplicas(keyspaceName, Encoding.UTF8.GetBytes("123"));
+                    replicasNotSync = SessionObjNotSync.Metadata.GetReplicas(keyspaceName, Encoding.UTF8.GetBytes("123"));
 
                     Assert.AreEqual(3, replicasSync.Count);
                     Assert.AreEqual(1, replicasNotSync.Count);
                 }, 100, 150);
 
-                var oldTokenMapNotSync = ClusterObjNotSync.Metadata.TokenToReplicasMap;
-                var oldTokenMapSync = ClusterObjSync.Metadata.TokenToReplicasMap;
+                var oldTokenMapNotSync = SessionObjNotSync.Metadata.TokenToReplicasMap;
+                var oldTokenMapSync = SessionObjSync.Metadata.TokenToReplicasMap;
                 
                 if (TestClusterManager.SupportsDecommissionForcefully())
                 {
@@ -100,36 +99,36 @@ namespace Cassandra.IntegrationTests.MetadataTests
 
                 TestHelper.RetryAssert(() =>
                 {
-                    Assert.AreEqual(2, ClusterObjSync.Metadata.Hosts.Count, "ClusterObjSync.Metadata.Hosts.Count");
-                    Assert.AreEqual(2, ClusterObjNotSync.Metadata.Hosts.Count, "ClusterObjNotSync.Metadata.Hosts.Count");
+                    Assert.AreEqual(2, SessionObjSync.Metadata.Hosts.Count, "ClusterObjSync.Metadata.Hosts.Count");
+                    Assert.AreEqual(2, SessionObjNotSync.Metadata.Hosts.Count, "ClusterObjNotSync.Metadata.Hosts.Count");
 
-                    replicasSync = ClusterObjSync.Metadata.GetReplicas(keyspaceName, Encoding.UTF8.GetBytes("123"));
-                    replicasNotSync = ClusterObjNotSync.Metadata.GetReplicas(keyspaceName, Encoding.UTF8.GetBytes("123"));
+                    replicasSync = SessionObjSync.Metadata.GetReplicas(keyspaceName, Encoding.UTF8.GetBytes("123"));
+                    replicasNotSync = SessionObjNotSync.Metadata.GetReplicas(keyspaceName, Encoding.UTF8.GetBytes("123"));
 
                     Assert.AreEqual(2, replicasSync.Count, "replicasSync.Count");
                     Assert.AreEqual(1, replicasNotSync.Count, "replicasNotSync.Count");
 
-                    Assert.IsFalse(object.ReferenceEquals(ClusterObjNotSync.Metadata.TokenToReplicasMap, oldTokenMapNotSync));
-                    Assert.IsFalse(object.ReferenceEquals(ClusterObjSync.Metadata.TokenToReplicasMap, oldTokenMapSync));
+                    Assert.IsFalse(object.ReferenceEquals(SessionObjNotSync.Metadata.TokenToReplicasMap, oldTokenMapNotSync));
+                    Assert.IsFalse(object.ReferenceEquals(SessionObjSync.Metadata.TokenToReplicasMap, oldTokenMapSync));
                 }, 1000, 360);
 
-                oldTokenMapNotSync = ClusterObjNotSync.Metadata.TokenToReplicasMap;
-                oldTokenMapSync = ClusterObjSync.Metadata.TokenToReplicasMap;
+                oldTokenMapNotSync = SessionObjNotSync.Metadata.TokenToReplicasMap;
+                oldTokenMapSync = SessionObjSync.Metadata.TokenToReplicasMap;
 
                 this.TestCluster.BootstrapNode(4);
                 TestHelper.RetryAssert(() =>
                 {
-                    Assert.AreEqual(3, ClusterObjSync.Metadata.Hosts.Count);
-                    Assert.AreEqual(3, ClusterObjNotSync.Metadata.Hosts.Count);
+                    Assert.AreEqual(3, SessionObjSync.Metadata.Hosts.Count);
+                    Assert.AreEqual(3, SessionObjNotSync.Metadata.Hosts.Count);
 
-                    replicasSync = ClusterObjSync.Metadata.GetReplicas(keyspaceName, Encoding.UTF8.GetBytes("123"));
-                    replicasNotSync = ClusterObjNotSync.Metadata.GetReplicas(keyspaceName, Encoding.UTF8.GetBytes("123"));
+                    replicasSync = SessionObjSync.Metadata.GetReplicas(keyspaceName, Encoding.UTF8.GetBytes("123"));
+                    replicasNotSync = SessionObjNotSync.Metadata.GetReplicas(keyspaceName, Encoding.UTF8.GetBytes("123"));
 
                     Assert.AreEqual(3, replicasSync.Count);
                     Assert.AreEqual(1, replicasNotSync.Count);
 
-                    Assert.IsFalse(object.ReferenceEquals(ClusterObjNotSync.Metadata.TokenToReplicasMap, oldTokenMapNotSync));
-                    Assert.IsFalse(object.ReferenceEquals(ClusterObjSync.Metadata.TokenToReplicasMap, oldTokenMapSync));
+                    Assert.IsFalse(object.ReferenceEquals(SessionObjNotSync.Metadata.TokenToReplicasMap, oldTokenMapNotSync));
+                    Assert.IsFalse(object.ReferenceEquals(SessionObjSync.Metadata.TokenToReplicasMap, oldTokenMapSync));
                 }, 1000, 360);
 
             }
@@ -148,8 +147,8 @@ namespace Cassandra.IntegrationTests.MetadataTests
         [TearDown]
         public void TearDown()
         {
-            ClusterObjSync?.Shutdown();
-            ClusterObjNotSync?.Shutdown();
+            SessionObjSync?.Shutdown();
+            SessionObjNotSync?.Shutdown();
             TestCluster?.Remove();
         }
     }

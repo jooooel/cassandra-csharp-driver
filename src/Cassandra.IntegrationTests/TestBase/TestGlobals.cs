@@ -92,7 +92,7 @@ namespace Cassandra.IntegrationTests.TestBase
             }
         }
 
-        protected Builder ClusterBuilder()
+        protected Builder SessionBuilder()
         {
             return TestUtils.NewBuilder();
         }

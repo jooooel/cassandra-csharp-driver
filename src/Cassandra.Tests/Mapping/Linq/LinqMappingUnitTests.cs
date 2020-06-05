@@ -34,10 +34,9 @@ namespace Cassandra.Tests.Mapping.Linq
     {
         private ISession GetSession(RowSet result)
         {
-            var clusterMock = new Mock<ICluster>();
-            clusterMock.Setup(c => c.Configuration).Returns(new Configuration());
 
             var sessionMock = new Mock<ISession>(MockBehavior.Strict);
+            sessionMock.Setup(c => c.Configuration).Returns(new Configuration());
             sessionMock.Setup(s => s.Keyspace).Returns<string>(null);
             sessionMock
                 .Setup(s => s.ExecuteAsync(It.IsAny<IStatement>()))
@@ -49,7 +48,6 @@ namespace Cassandra.Tests.Mapping.Linq
                 .Verifiable();
             sessionMock.Setup(s => s.PrepareAsync(It.IsAny<string>())).Returns(TaskHelper.ToTask(GetPrepared("Mock query")));
             sessionMock.Setup(s => s.BinaryProtocolVersion).Returns(2);
-            sessionMock.Setup(s => s.Cluster).Returns(clusterMock.Object);
             return sessionMock.Object;
         }
 
@@ -138,12 +136,10 @@ namespace Cassandra.Tests.Mapping.Linq
         public void Linq_CqlQuery_Automatically_Pages()
         {
             const int pageLength = 100;
-            var clusterMock = new Mock<ICluster>();
-            clusterMock.Setup(c => c.Configuration).Returns(new Configuration());
             var rs = TestDataHelper.GetSingleColumnRowSet("int_val", Enumerable.Repeat(1, pageLength).ToArray());
             BoundStatement stmt = null;
             var sessionMock = new Mock<ISession>(MockBehavior.Strict);
-            sessionMock.Setup(s => s.Cluster).Returns(clusterMock.Object);
+            sessionMock.Setup(c => c.Configuration).Returns(new Configuration());
             sessionMock.Setup(s => s.Keyspace).Returns<string>(null);
             sessionMock
                 .Setup(s => s.ExecuteAsync(It.IsAny<BoundStatement>()))
