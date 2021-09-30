@@ -875,7 +875,7 @@ namespace Cassandra.Connections
             catch (Exception ex)
             {
                 // Probably a SocketException/AuthenticationException, move along
-                HostConnectionPool.Logger.Error("Exception while trying borrow a connection from a pool", ex);
+                HostConnectionPool.Logger.Info("Exception while trying borrow a connection from a pool", ex);
                 triedHosts[_host.Address] = ex;
             }
 

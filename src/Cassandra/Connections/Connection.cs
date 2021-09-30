@@ -387,7 +387,7 @@ namespace Cassandra.Connections
                 if (!IsDisposed)
                 {
                     //If it was not manually disposed
-                    Connection.Logger.Warning("Can not issue an heartbeat request as connection is closed");
+                    Connection.Logger.Info("Can not issue an heartbeat request as connection is closed");
                     OnIdleRequestException?.Invoke(new SocketException((int)SocketError.NotConnected));
                 }
                 return;
