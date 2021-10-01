@@ -883,7 +883,16 @@ namespace Cassandra.Connections
             catch (Exception ex)
             {
                 // Probably a SocketException/AuthenticationException, move along
-                HostConnectionPool.Logger.Info("Exception while trying borrow a connection from a pool", ex);
+                if (!_canCreateForeground && createIfNeeded)
+                {
+                    HostConnectionPool.Logger.Verbose("Could not open a connection to {0} " +
+                                                      "because the pool is not allowing creation of connections in the foreground. " +
+                                                      "Exception: {1}", _host.Address, ex.ToString());
+                }
+                else
+                {
+                    HostConnectionPool.Logger.Warning("Exception while trying borrow a connection from a pool: {0}", ex.ToString());
+                }
                 triedHosts[_host.Address] = ex;
             }
 
