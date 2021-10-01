@@ -49,11 +49,6 @@ namespace Cassandra.Connections
         private readonly IStartupRequestFactory _startupRequestFactory;
         private readonly ITcpSocket _tcpSocket;
         private long _disposed;
-
-        /// <summary>
-        /// Determines that the connection canceled pending operations.
-        /// It could be because its being closed or there was a socket error.
-        /// </summary>
         private volatile bool _isCanceled;
 
         private readonly Timer _idleTimer;
@@ -151,6 +146,15 @@ namespace Cassandra.Connections
         public bool IsDisposed
         {
             get { return Interlocked.Read(ref _disposed) > 0L; }
+        }
+        
+        /// <summary>
+        /// Determines that the connection cancelled pending operations.
+        /// It could be because its being closed or there was a socket error.
+        /// </summary>
+        public bool IsCancelled
+        {
+            get { return _isCanceled; }
         }
 
         /// <summary>

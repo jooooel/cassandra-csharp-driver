@@ -524,8 +524,16 @@ namespace Cassandra.Connections
         /// </summary>
         private void OnIdleRequestException(IConnection c, Exception ex)
         {
-            HostConnectionPool.Logger.Warning("Connection to {0} considered as unhealthy after idle timeout exception: {1}",
-                _host.Address, ex);
+            if (c.IsCancelled)
+            {
+                HostConnectionPool.Logger.Info("Connection to {0} is cancelled, disposing it. Exception: {1}",
+                    _host.Address, ex);
+            }
+            else
+            {
+                HostConnectionPool.Logger.Warning("Connection to {0} considered as unhealthy after idle timeout exception: {1}",
+                    _host.Address, ex);
+            }
             OnConnectionClosing(c);
             c.Dispose();
         }
