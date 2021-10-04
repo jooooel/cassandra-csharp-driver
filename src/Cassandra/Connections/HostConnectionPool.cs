@@ -193,7 +193,6 @@ namespace Cassandra.Connections
         public void Remove(IConnection c)
         {
             OnConnectionClosing(c);
-            c.Dispose();
         }
 
         public void ConsiderResizingPool(int inFlight)
@@ -249,7 +248,7 @@ namespace Cassandra.Connections
             var connections = _connections.ClearAndGet();
             foreach (var c in connections)
             {
-                c.Dispose();
+                c.Close();
             }
             _host.Up -= OnHostUp;
             _host.Down -= OnHostDown;
@@ -273,7 +272,7 @@ namespace Cassandra.Connections
             }
             catch
             {
-                c.Dispose();
+                c.Close();
                 throw;
             }
             if (_poolingOptions.GetHeartBeatInterval() > 0)
@@ -371,8 +370,8 @@ namespace Cassandra.Connections
             {
                 var removalInfo = _connections.RemoveAndCount(c);
                 currentLength = removalInfo.Item2;
-                var hasBeenRemoved = removalInfo.Item1;
-                if (!hasBeenRemoved)
+                var removed = removalInfo.Item1;
+                if (!removed)
                 {
                     // It has been already removed (via event or direct call)
                     // When it was removed, all the following checks have been made
@@ -491,7 +490,7 @@ namespace Cassandra.Connections
                         GetHashCode(), _host.Address, connections.Length, drained ? "successful" : "unsuccessful");
                     foreach (var c in connections)
                     {
-                        c.Dispose();
+                        c.Close(null);
                     }
                     afterDrainHandler?.Invoke();
                 });
@@ -524,18 +523,17 @@ namespace Cassandra.Connections
         /// </summary>
         private void OnIdleRequestException(IConnection c, Exception ex)
         {
-            if (c.IsCancelled)
+            if (c.IsClosed)
             {
-                HostConnectionPool.Logger.Info("Connection to {0} is cancelled, disposing it. Exception: {1}",
+                HostConnectionPool.Logger.Info("Idle timeout exception, connection to {0} is closed. Exception: {1}",
                     _host.Address, ex);
             }
             else
             {
                 HostConnectionPool.Logger.Warning("Connection to {0} considered as unhealthy after idle timeout exception: {1}",
                     _host.Address, ex);
+                c.Close();
             }
-            OnConnectionClosing(c);
-            c.Dispose();
         }
 
         /// <inheritdoc />
@@ -706,7 +704,7 @@ namespace Cassandra.Connections
             {
                 HostConnectionPool.Logger.Info("Connection to {0} opened successfully but pool #{1} was being closed", 
                     _host.Address, GetHashCode());
-                c.Dispose();
+                c.Close();
                 return await FinishOpen(tcs, false, HostConnectionPool.GetNotConnectedException()).ConfigureAwait(false);
             }
 
@@ -721,7 +719,7 @@ namespace Cassandra.Connections
                 HostConnectionPool.Logger.Info("Connection to {0} opened successfully and added to the pool #{1} but it was being closed",
                     _host.Address, GetHashCode());
                 _connections.Remove(c);
-                c.Dispose();
+                c.Close();
                 return await FinishOpen(tcs, false, HostConnectionPool.GetNotConnectedException()).ConfigureAwait(false);
             }
 

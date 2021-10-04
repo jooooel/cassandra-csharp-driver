@@ -306,6 +306,7 @@ namespace Cassandra.Connections.Control
             }
 
             var triedHosts = new Dictionary<IPEndPoint, Exception>();
+            var oldConnection = _connection;
             foreach (var endPointResolutionTask in endPointResolutionTasksLazyIterator)
             {
                 var endPoints = await endPointResolutionTask.ConfigureAwait(false);
@@ -379,14 +380,16 @@ namespace Cassandra.Connections.Control
 
                         await _config.ServerEventsSubscriber.SubscribeToServerEvents(connection, OnConnectionCassandraEvent).ConfigureAwait(false);
                         await _metadata.RebuildTokenMapAsync(false, _config.MetadataSyncOptions.MetadataSyncEnabled).ConfigureAwait(false);
-
-                        _host.Down += OnHostDown;
+                        
+                        currentHost.Down += OnHostDown;
+                        connection.Closing += OnConnectionClosing;
+                        connection.OnIdleRequestException += ex => OnIdleRequestException(connection, ex);
 
                         return;
                     }
                     catch (Exception ex)
                     {
-                        connection.Dispose();
+                        connection.Close();
 
                         if (ex is ObjectDisposedException)
                         {
@@ -398,7 +401,8 @@ namespace Cassandra.Connections.Control
                             throw new ObjectDisposedException("Control Connection has been disposed.", ex);
                         }
 
-                        ControlConnection.Logger.Info("Failed to connect to {0}. Exception: {1}", endPoint.EndpointFriendlyName, ex.ToString());
+                        ControlConnection.Logger.Info(
+                            "Failed to connect to {0}. Exception: {1}", endPoint.EndpointFriendlyName, ex.ToString());
 
                         // There was a socket or authentication exception or an unexpected error
                         triedHosts[endPoint.GetHostIpEndPointWithFallback()] = ex;
@@ -408,7 +412,45 @@ namespace Cassandra.Connections.Control
             throw new NoHostAvailableException(triedHosts);
         }
 
-        private async void ReconnectEventHandler(object state)
+        private void ReconnectEventHandler(object state)
+        {
+            ReconnectFireAndForget();
+        }
+        
+        private void OnConnectionClosing(IConnection connection)
+        {
+            if (Interlocked.Read(ref _isShutdown) >= 1)
+            {
+                return;
+            }
+
+            connection.Closing -= OnConnectionClosing;
+            ControlConnection.Logger.Warning(
+                "Connection {0} used by the ControlConnection is closing.", connection.EndPoint.EndpointFriendlyName);
+            ReconnectFireAndForget();
+        }
+        
+        /// <summary>
+        /// Handler that gets invoked when if there is a socket exception when making a heartbeat/idle request
+        /// </summary>
+        private void OnIdleRequestException(IConnection c, Exception ex)
+        {
+            if (c.IsClosed)
+            {
+                ControlConnection.Logger.Info("Idle timeout exception, connection to {0} used in control connection is closed, " +
+                                              "triggering a reconnection. Exception: {1}",
+                    c.EndPoint.EndpointFriendlyName, ex);
+            }
+            else
+            {
+                ControlConnection.Logger.Warning("Connection to {0} used in control connection considered as unhealthy after " +
+                                                 "idle timeout exception, triggering reconnection: {1}",
+                    c.EndPoint.EndpointFriendlyName, ex);
+                c.Close();
+            }
+        }
+        
+        private async void ReconnectFireAndForget()
         {
             try
             {
@@ -430,7 +472,6 @@ namespace Cassandra.Connections.Control
                 return await currentTask.ConfigureAwait(false);
             }
             Unsubscribe();
-            var oldConnection = _connection;
             try
             {
                 ControlConnection.Logger.Info("Trying to reconnect the ControlConnection");
@@ -454,13 +495,6 @@ namespace Cassandra.Connections.Control
 
                 // It will throw the same exception that it was set in the TCS
                 throw;
-            }
-            finally
-            {
-                if (_connection != oldConnection)
-                {
-                    oldConnection.Dispose();
-                }
             }
 
             if (IsShutdown)
@@ -519,6 +553,7 @@ namespace Cassandra.Connections.Control
             catch (Exception ex)
             {
                 ControlConnection.Logger.Error("There was an error when trying to refresh the ControlConnection", ex);
+                reconnect = true;
             }
             finally
             {
@@ -541,14 +576,14 @@ namespace Cassandra.Connections.Control
             if (c != null)
             {
                 ControlConnection.Logger.Info("Shutting down control connection to {0}", c.EndPoint.EndpointFriendlyName);
-                c.Dispose();
+                c.Close();
             }
             _reconnectionTimer.Change(Timeout.Infinite, Timeout.Infinite);
             _reconnectionTimer.Dispose();
         }
 
         /// <summary>
-        /// Unsubscribe from the current host 'Down' event.
+        /// Unsubscribe from the current host 'Down' event and the connection 'Closing' event.
         /// </summary>
         private void Unsubscribe()
         {
@@ -557,6 +592,12 @@ namespace Cassandra.Connections.Control
             {
                 h.Down -= OnHostDown;
             }
+
+            var c = _connection;
+            if (c != null)
+            {
+                c.Closing -= OnConnectionClosing;
+            }
         }
 
         private void OnHostDown(Host h)
@@ -564,7 +605,7 @@ namespace Cassandra.Connections.Control
             h.Down -= OnHostDown;
             ControlConnection.Logger.Warning("Host {0} used by the ControlConnection DOWN", h.Address);
             // Queue reconnection to occur in the background
-            Task.Run(Reconnect).Forget();
+            ReconnectFireAndForget();
         }
 
         private async void OnConnectionCassandraEvent(object sender, CassandraEventArgs e)

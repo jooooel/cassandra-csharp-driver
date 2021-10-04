@@ -49,7 +49,7 @@ namespace Cassandra.Connections
         private readonly IStartupRequestFactory _startupRequestFactory;
         private readonly ITcpSocket _tcpSocket;
         private long _disposed;
-        private volatile bool _isCanceled;
+        private volatile bool _isClosed;
 
         private readonly Timer _idleTimer;
         private long _timedOutOperations;
@@ -149,12 +149,12 @@ namespace Cassandra.Connections
         }
         
         /// <summary>
-        /// Determines that the connection cancelled pending operations.
-        /// It could be because its being closed or there was a socket error.
+        /// Determines that the connection is closed and cancelled pending operations.
+        /// It could be because there was a socket error or Close() was called.
         /// </summary>
-        public bool IsCancelled
+        public bool IsClosed
         {
-            get { return _isCanceled; }
+            get { return _isClosed; }
         }
 
         /// <summary>
@@ -292,13 +292,10 @@ namespace Cassandra.Connections
             throw new ProtocolErrorException("Expected SASL response, obtained " + response.GetType().Name);
         }
 
-        /// <summary>
-        /// It callbacks all operations already sent / or to be written, that do not have a response.
-        /// Invoked from an IO Thread or a pool thread
-        /// </summary>
-        internal void CancelPending(Exception ex, SocketError? socketError = null)
+        /// <inheritdoc />
+        public void Close(Exception ex = null, SocketError? socketError = null)
         {
-            _isCanceled = true;
+            _isClosed = true;
             var wasClosed = Interlocked.Exchange(ref _writeState, Connection.WriteStateClosed) == Connection.WriteStateClosed;
             if (!wasClosed)
             {
@@ -312,45 +309,52 @@ namespace Cassandra.Connections
                     Connection.Logger.Verbose("The socket status received was {0}", socketError.Value);
                 }
             }
-            if (ex == null || ex is ObjectDisposedException)
+
+            if (!_writeQueue.IsEmpty || !_pendingOperations.IsEmpty)
             {
-                if (socketError != null)
+                if (ex == null || ex is ObjectDisposedException)
                 {
-                    ex = new SocketException((int)socketError.Value);
+                    ex = socketError != null 
+                        ? new SocketException((int)socketError.Value) 
+                        : new SocketException((int)SocketError.NotConnected);
                 }
-                else
+
+                // Dequeue all the items in the write queue
+                var ops = new LinkedList<OperationState>();
+                OperationState state;
+                while (_writeQueue.TryDequeue(out state))
                 {
-                    //It is closing
-                    ex = new SocketException((int)SocketError.NotConnected);
+                    ops.AddLast(state);
                 }
-            }
-            // Dequeue all the items in the write queue
-            var ops = new LinkedList<OperationState>();
-            OperationState state;
-            while (_writeQueue.TryDequeue(out state))
-            {
-                ops.AddLast(state);
-            }
-            // Remove every pending operation
-            while (!_pendingOperations.IsEmpty)
-            {
-                Interlocked.MemoryBarrier();
-                // Remove using a snapshot of the keys
-                var keys = _pendingOperations.Keys.ToArray();
-                foreach (var key in keys)
+
+                // Remove every pending operation
+                while (!_pendingOperations.IsEmpty)
                 {
-                    if (_pendingOperations.TryRemove(key, out state))
+                    Interlocked.MemoryBarrier();
+                    // Remove using a snapshot of the keys
+                    var keys = _pendingOperations.Keys.ToArray();
+                    foreach (var key in keys)
                     {
-                        ops.AddLast(state);
+                        if (_pendingOperations.TryRemove(key, out state))
+                        {
+                            ops.AddLast(state);
+                        }
                     }
                 }
+                Interlocked.MemoryBarrier();
+                OperationState.CallbackMultiple(ops, RequestError.CreateClientError(ex, false), GetTimestamp());
             }
-            Interlocked.MemoryBarrier();
-            OperationState.CallbackMultiple(ops, RequestError.CreateClientError(ex, false), GetTimestamp());
+
             Interlocked.Exchange(ref _inFlight, 0);
+            InternalDispose();
         }
 
         public virtual void Dispose()
+        {
+            Close();
+        }
+
+        private void InternalDispose()
         {
             if (Interlocked.Increment(ref _disposed) != 1)
             {
@@ -386,7 +390,7 @@ namespace Cassandra.Connections
         private void IdleTimeoutHandler(object state)
         {
             //Ensure there are no more idle timeouts until the query finished sending
-            if (_isCanceled)
+            if (_isClosed)
             {
                 if (!IsDisposed)
                 {
@@ -462,8 +466,8 @@ namespace Cassandra.Connections
 
             //Init TcpSocket
             _tcpSocket.Init();
-            _tcpSocket.Error += CancelPending;
-            _tcpSocket.Closing += () => CancelPending(null);
+            _tcpSocket.Error += Close;
+            _tcpSocket.Closing += () => Close(null);
             //Read and write event handlers are going to be invoked using IO Threads
             _tcpSocket.Read += ReadHandler;
             _tcpSocket.WriteCompleted += WriteCompletedHandler;
@@ -506,7 +510,7 @@ namespace Cassandra.Connections
 
         private void ReadHandler(byte[] buffer, int bytesReceived)
         {
-            if (_isCanceled)
+            if (_isClosed)
             {
                 //All pending operations have been canceled, there is no point in reading from the wire.
                 return;
@@ -695,7 +699,7 @@ namespace Cassandra.Connections
             nextMessageStream.Write(buffer, offset, length - offset);
             Volatile.Write(ref _readStream, nextMessageStream);
             Volatile.Write(ref _receivingHeader, header);
-            if (_isCanceled)
+            if (_isClosed)
             {
                 // Connection was disposed since we started to store the buffer, try to dispose the stream
                 Interlocked.Exchange(ref _readStream, null)?.Dispose();
@@ -793,7 +797,7 @@ namespace Cassandra.Connections
         /// <inheritdoc />
         public OperationState Send(IRequest request, Action<IRequestError, Response> callback, int timeoutMillis)
         {
-            if (_isCanceled)
+            if (_isClosed)
             {
                 // Avoid calling back before returning
                 Task.Factory.StartNew(() => callback(RequestError.CreateClientError(new SocketException((int)SocketError.NotConnected), true), null),
@@ -850,7 +854,7 @@ namespace Cassandra.Connections
             {
                 // Probably there is an item in the write queue, we should cancel pending
                 // Avoid canceling in the user thread
-                Task.Factory.StartNew(() => CancelPending(null), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
+                Task.Factory.StartNew(() => Close(null), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
                 return;
             }
             // Start a new task using the TaskScheduler for writing to avoid using the User thread
@@ -897,7 +901,7 @@ namespace Cassandra.Connections
                     break;
                 }
                 Connection.Logger.Verbose("Sending #{0} for {1} to {2}", streamId, state.Request.GetType().Name, EndPoint.EndpointFriendlyName);
-                if (_isCanceled)
+                if (_isClosed)
                 {
                     DecrementInFlight();
                     state.InvokeCallback(RequestError.CreateClientError(new SocketException((int)SocketError.NotConnected), true), timestamp);
@@ -1051,7 +1055,7 @@ namespace Cassandra.Connections
             //There is no need for synchronization here
             //Only 1 thread can be here at the same time.
             //Set the idle timeout to avoid idle disconnects
-            if (_heartBeatInterval > 0 && !_isCanceled)
+            if (_heartBeatInterval > 0 && !_isClosed)
             {
                 try
                 {

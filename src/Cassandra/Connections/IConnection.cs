@@ -94,7 +94,7 @@ namespace Cassandra.Connections
         /// Determines that the connection cancelled pending operations.
         /// It could be because its being closed or there was a socket error.
         /// </summary>
-        bool IsCancelled { get; }
+        bool IsClosed { get; }
 
         /// <summary>
         /// Gets the current keyspace.
@@ -141,5 +141,11 @@ namespace Cassandra.Connections
         /// If the keyspace is different from the current value, it sends a Query request to change it
         /// </summary>
         Task<bool> SetKeyspace(string value);
+        
+        /// <summary>
+        /// It callbacks all operations already sent / or to be written, that do not have a response.
+        /// Invoked from an IO Thread or a pool thread
+        /// </summary>
+        void Close(Exception ex = null, SocketError? socketError = null);
     }
 }

@@ -297,7 +297,7 @@ namespace Cassandra.Tests.Connections.Control
                 {
                     foreach (var conn in kvp.Value)
                     {
-                        Mock.Get(conn).Verify(c => c.Dispose(), Times.AtLeastOnce);
+                        Mock.Get(conn).Verify(c => c.Close(It.IsAny<Exception>(), It.IsAny<SocketError>()), Times.AtLeastOnce);
                     }
                 }
             }
