@@ -70,7 +70,7 @@ namespace Cassandra.Connections
             var sniOptions = await _sniOptionsProvider.GetAsync(refreshSniOptions).ConfigureAwait(false);
             await _proxyDnsResolver.RefreshIfNeededAsync(
                 () => refreshSniOptions || refreshCache || (_resolvedProxyEndPoints == null && _endPoint == null),
-                () => UnsafeRefreshProxyEndpointsAsync(sniOptions));
+                () => UnsafeRefreshProxyEndpointsAsync(sniOptions)).ConfigureAwait(false);
             return sniOptions;
         }
 
