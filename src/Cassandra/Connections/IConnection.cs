@@ -84,11 +84,6 @@ namespace Cassandra.Connections
         /// Gets the amount of operations that timed out and didn't get a response
         /// </summary>
         int TimedOutOperations { get; }
-
-        /// <summary>
-        /// Determine if the Connection has been explicitly disposed
-        /// </summary>
-        bool IsDisposed { get; }
         
         /// <summary>
         /// Determines that the connection cancelled pending operations.
@@ -146,6 +141,6 @@ namespace Cassandra.Connections
         /// It callbacks all operations already sent / or to be written, that do not have a response.
         /// Invoked from an IO Thread or a pool thread
         /// </summary>
-        void Close(Exception ex = null, SocketError? socketError = null);
+        void Close();
     }
 }

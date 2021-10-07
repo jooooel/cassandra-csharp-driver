@@ -188,6 +188,23 @@ namespace Cassandra.Connections
             _connectionObserver = connectionObserver;
             _timerEnabled = configuration.MetricsEnabled
                             && configuration.MetricsOptions.EnabledNodeMetrics.Contains(NodeMetric.Timers.CqlMessages);
+            
+            _freeOperations = new ConcurrentStack<short>(Enumerable.Range(0, GetMaxConcurrentRequests(Serializer)).Select(s => (short)s).Reverse());
+            _pendingOperations = new ConcurrentDictionary<short, OperationState>();
+            _writeQueue = new ConcurrentQueue<OperationState>();
+
+            if (Options.CustomCompressor != null)
+            {
+                Compressor = Options.CustomCompressor;
+            }
+            else if (Options.Compression == CompressionType.LZ4)
+            {
+                Compressor = new LZ4Compressor();
+            }
+            else if (Options.Compression == CompressionType.Snappy)
+            {
+                Compressor = new SnappyCompressor();
+            }
         }
 
         private void IncrementInFlight()
@@ -293,7 +310,12 @@ namespace Cassandra.Connections
         }
 
         /// <inheritdoc />
-        public void Close(Exception ex = null, SocketError? socketError = null)
+        public void Close()
+        {
+            CloseInternal(null, null, true);
+        }
+
+        private void CloseInternal(Exception ex, SocketError? socketError, bool dispose)
         {
             _isClosed = true;
             var wasClosed = Interlocked.Exchange(ref _writeState, Connection.WriteStateClosed) == Connection.WriteStateClosed;
@@ -346,7 +368,15 @@ namespace Cassandra.Connections
             }
 
             Interlocked.Exchange(ref _inFlight, 0);
-            InternalDispose();
+            if (dispose)
+            {
+                InternalDispose();
+            }
+        }
+        
+        private void OnSocketError(Exception ex, SocketError? socketError)
+        {
+            CloseInternal(ex, socketError, false);
         }
 
         public virtual void Dispose()
@@ -447,27 +477,10 @@ namespace Cassandra.Connections
         /// <exception cref="UnsupportedProtocolVersionException"></exception>
         public async Task<Response> DoOpen()
         {
-            _freeOperations = new ConcurrentStack<short>(Enumerable.Range(0, GetMaxConcurrentRequests(Serializer)).Select(s => (short)s).Reverse());
-            _pendingOperations = new ConcurrentDictionary<short, OperationState>();
-            _writeQueue = new ConcurrentQueue<OperationState>();
-
-            if (Options.CustomCompressor != null)
-            {
-                Compressor = Options.CustomCompressor;
-            }
-            else if (Options.Compression == CompressionType.LZ4)
-            {
-                Compressor = new LZ4Compressor();
-            }
-            else if (Options.Compression == CompressionType.Snappy)
-            {
-                Compressor = new SnappyCompressor();
-            }
-
             //Init TcpSocket
             _tcpSocket.Init();
-            _tcpSocket.Error += Close;
-            _tcpSocket.Closing += () => Close(null);
+            _tcpSocket.Error += OnSocketError;
+            _tcpSocket.Closing += Close;
             //Read and write event handlers are going to be invoked using IO Threads
             _tcpSocket.Read += ReadHandler;
             _tcpSocket.WriteCompleted += WriteCompletedHandler;
@@ -854,7 +867,7 @@ namespace Cassandra.Connections
             {
                 // Probably there is an item in the write queue, we should cancel pending
                 // Avoid canceling in the user thread
-                Task.Factory.StartNew(() => Close(null), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
+                Task.Factory.StartNew(Close, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
                 return;
             }
             // Start a new task using the TaskScheduler for writing to avoid using the User thread

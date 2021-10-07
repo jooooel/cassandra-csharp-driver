@@ -49,6 +49,7 @@ namespace Cassandra.Tests.Connections.TestHelpers
                 {
                     var connection = Mock.Of<IConnection>();
                     Mock.Get(connection).SetupGet(c => c.EndPoint).Returns(endpoint);
+                    Mock.Get(connection).Setup(c => c.Close()).Raises(c => c.Closing += null, connection);
                     return connection;
                 };
             }

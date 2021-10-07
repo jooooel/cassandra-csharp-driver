@@ -464,7 +464,7 @@ namespace Cassandra.Connections
 
         public void Kill()
         {
-            _socket.Shutdown(SocketShutdown.Send);
+            _socket.Disconnect(true);
         }
 
         public void Dispose()

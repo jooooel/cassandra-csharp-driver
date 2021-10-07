@@ -192,7 +192,19 @@ namespace Cassandra.Connections
         /// <inheritdoc />
         public void Remove(IConnection c)
         {
-            OnConnectionClosing(c);
+            if (c == null)
+            {
+                return;
+            }
+
+            if (c.IsClosed)
+            {
+                OnConnectionClosing(c);
+            }
+            else
+            {
+                c.Close();
+            }
         }
 
         public void ConsiderResizingPool(int inFlight)
@@ -266,6 +278,11 @@ namespace Cassandra.Connections
         {
             var endPoint = await _config.EndPointResolver.GetConnectionEndPointAsync(_host, isReconnection).ConfigureAwait(false);
             var c = _config.ConnectionFactory.Create(_serializerManager.GetCurrentSerializer(), endPoint, _config, _observerFactory.CreateConnectionObserver(_host));
+            c.Closing += OnConnectionClosing;
+            if (_poolingOptions.GetHeartBeatInterval() > 0)
+            {
+                c.OnIdleRequestException += ex => OnIdleRequestException(c, ex);
+            }
             try
             {
                 await c.Open().ConfigureAwait(false);
@@ -275,11 +292,6 @@ namespace Cassandra.Connections
                 c.Close();
                 throw;
             }
-            if (_poolingOptions.GetHeartBeatInterval() > 0)
-            {
-                c.OnIdleRequestException += ex => OnIdleRequestException(c, ex);
-            }
-            c.Closing += OnConnectionClosing;
             return c;
         }
         
@@ -363,7 +375,7 @@ namespace Cassandra.Connections
             return c;
         }
 
-        private void OnConnectionClosing(IConnection c = null)
+        internal void OnConnectionClosing(IConnection c = null)
         {
             int currentLength;
             if (c != null)
@@ -490,7 +502,7 @@ namespace Cassandra.Connections
                         GetHashCode(), _host.Address, connections.Length, drained ? "successful" : "unsuccessful");
                     foreach (var c in connections)
                     {
-                        c.Close(null);
+                        c.Close();
                     }
                     afterDrainHandler?.Invoke();
                 });
@@ -716,11 +728,21 @@ namespace Cassandra.Connections
             {
                 // We haven't use a CAS operation, so it's possible that the pool is being closed while adding a new
                 // connection, we should remove it.
-                HostConnectionPool.Logger.Info("Connection to {0} opened successfully and added to the pool #{1} but it was being closed",
+                HostConnectionPool.Logger.Info("Connection to {0} opened successfully and added to the pool #{1} but the pool was being closed",
                     _host.Address, GetHashCode());
                 _connections.Remove(c);
                 c.Close();
                 return await FinishOpen(tcs, false, HostConnectionPool.GetNotConnectedException()).ConfigureAwait(false);
+            }
+
+            if (c.IsClosed)
+            {
+                // We haven't use a CAS operation, so it's possible that the connection is being closed while adding it
+                HostConnectionPool.Logger.Info("Connection to {0} opened successfully and added to the pool #{1} but it got closed",
+                    _host.Address, GetHashCode());
+                _connections.Remove(c);
+                c.Close();
+                return await FinishOpen(tcs, true, HostConnectionPool.GetNotConnectedException()).ConfigureAwait(false);
             }
 
             return await FinishOpen(tcs, true, null, c).ConfigureAwait(false);

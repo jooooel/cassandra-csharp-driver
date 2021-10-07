@@ -32,6 +32,9 @@ namespace Cassandra.Connections.Control
 {
     internal class ControlConnection : IControlConnection
     {
+        private const int StateRunning = 0;
+        private const int StateDisposed = 1;
+
         private readonly IInternalCluster _cluster;
         private readonly Metadata _metadata;
         private volatile Host _host;
@@ -44,7 +47,6 @@ namespace Cassandra.Connections.Control
         private readonly IReconnectionPolicy _reconnectionPolicy;
         private IReconnectionSchedule _reconnectionSchedule;
         private readonly Timer _reconnectionTimer;
-        private long _isShutdown;
         private int _refreshFlag;
         private Task<bool> _reconnectTask;
         private readonly ISerializerManager _serializer;
@@ -53,7 +55,9 @@ namespace Cassandra.Connections.Control
         private readonly ITopologyRefresher _topologyRefresher;
         private readonly ISupportedOptionsInitializer _supportedOptionsInitializer;
 
-        private bool IsShutdown => Interlocked.Read(ref _isShutdown) > 0L;
+        private long _state = ControlConnection.StateRunning;
+
+        private bool IsShutdown => Interlocked.Read(ref _state) == ControlConnection.StateDisposed;
 
         /// <summary>
         /// Gets the binary protocol version to be used for this cluster.
@@ -272,15 +276,21 @@ namespace Cassandra.Connections.Control
             var addedContactPoints = false;
             if (isInitializing || totalConnectivityLoss)
             {
+                var refresh = true;
+                if (isInitializing)
+                {
+                    // refresh already happened in the ctor
+                    refresh = _config.KeepContactPointsUnresolved;
+                }
                 addedContactPoints = true;
-                if (totalConnectivityLoss)
+                if (totalConnectivityLoss && !isInitializing)
                 {
                     ControlConnection.Logger.Warning(
                         "Total connectivity loss detected due to the fact that there are no open connections, " +
                         "re-resolving the contact points.");
                 }
                 endPointResolutionTasksLazyIterator = endPointResolutionTasksLazyIterator.Concat(
-                    ContactPointResolutionTasksEnumerable(attemptedContactPoints, true));
+                    ContactPointResolutionTasksEnumerable(attemptedContactPoints, refresh));
             }
 
             // add endpoints from the default LBP if it is already initialized
@@ -302,11 +312,15 @@ namespace Cassandra.Connections.Control
             if (isInitializing)
             {
                 endPointResolutionTasksLazyIterator = endPointResolutionTasksLazyIterator.Concat(
-                    AllHostsEndPointResolutionTasksEnumerable(attemptedContactPoints, attemptedHosts, true, _config.KeepContactPointsUnresolved, totalConnectivityLoss));
+                    AllHostsEndPointResolutionTasksEnumerable(attemptedContactPoints, attemptedHosts, true, _config.KeepContactPointsUnresolved, true));
             }
+            
+            var oldConnection = _connection;
+            var oldHost = _host;
+            var oldEndpoint = _currentConnectionEndPoint;
+            Unsubscribe(oldHost, oldConnection);
 
             var triedHosts = new Dictionary<IPEndPoint, Exception>();
-            var oldConnection = _connection;
             foreach (var endPointResolutionTask in endPointResolutionTasksLazyIterator)
             {
                 var endPoints = await endPointResolutionTask.ConfigureAwait(false);
@@ -314,6 +328,7 @@ namespace Cassandra.Connections.Control
                 {
                     ControlConnection.Logger.Verbose("Attempting to connect to {0}.", endPoint.EndpointFriendlyName);
                     var connection = _config.ConnectionFactory.CreateUnobserved(_serializer.GetCurrentSerializer(), endPoint, _config);
+                    Host currentHost = null;
                     try
                     {
                         var version = _serializer.CurrentProtocolVersion;
@@ -344,11 +359,21 @@ namespace Cassandra.Connections.Control
                                              .ConfigureAwait(false);
                         }
 
-                        _connection = connection;
+                        if (isInitializing)
+                        {
+                            await _supportedOptionsInitializer.ApplySupportedOptionsAsync(connection).ConfigureAwait(false);
+                        }
 
-                        //// We haven't used a CAS operation, so it's possible that the control connection is
-                        //// being closed while a reconnection attempt is happening, we should dispose it in that case.
-                        if (IsShutdown)
+                        currentHost = await _topologyRefresher.RefreshNodeListAsync(
+                            endPoint, connection, _serializer.GetCurrentSerializer()).ConfigureAwait(false);
+
+                        if (isInitializing)
+                        {
+                            connection = await _config.ProtocolVersionNegotiator.NegotiateVersionAsync(
+                                _config, _metadata, connection, _serializer).ConfigureAwait(false);
+                        }
+                        
+                        if (!SetCurrentConnection(oldConnection, connection, currentHost, endPoint))
                         {
                             ControlConnection.Logger.Info(
                                 "Connection established to {0} successfully but the Control Connection was being disposed, " +
@@ -357,39 +382,27 @@ namespace Cassandra.Connections.Control
                             throw new ObjectDisposedException("Connection established successfully but the Control Connection was being disposed.");
                         }
 
+                        Subscribe(currentHost, connection);
+
                         ControlConnection.Logger.Info(
-                            "Connection established to {0} using protocol version {1}.",
+                            "Connection established to {0} using protocol version {1}. Building token map...",
                             connection.EndPoint.EndpointFriendlyName,
                             _serializer.CurrentProtocolVersion.ToString("D"));
 
-                        if (isInitializing)
-                        {
-                            await _supportedOptionsInitializer.ApplySupportedOptionsAsync(connection).ConfigureAwait(false);
-                        }
-
-                        var currentHost = await _topologyRefresher.RefreshNodeListAsync(
-                            endPoint, connection, _serializer.GetCurrentSerializer()).ConfigureAwait(false);
-
-                        SetCurrentConnection(currentHost, endPoint);
-
-                        if (isInitializing)
-                        {
-                            await _config.ProtocolVersionNegotiator.NegotiateVersionAsync(
-                                _config, _metadata, connection, _serializer).ConfigureAwait(false);
-                        }
-
                         await _config.ServerEventsSubscriber.SubscribeToServerEvents(connection, OnConnectionCassandraEvent).ConfigureAwait(false);
                         await _metadata.RebuildTokenMapAsync(false, _config.MetadataSyncOptions.MetadataSyncEnabled).ConfigureAwait(false);
-                        
-                        currentHost.Down += OnHostDown;
-                        connection.Closing += OnConnectionClosing;
-                        connection.OnIdleRequestException += ex => OnIdleRequestException(connection, ex);
 
                         return;
                     }
                     catch (Exception ex)
                     {
-                        connection.Close();
+                        SetCurrentConnection(null, oldConnection, oldHost, oldEndpoint);
+                        Unsubscribe(currentHost, connection);
+                        Subscribe(oldHost, oldConnection);
+                        if (!connection.IsClosed)
+                        {
+                            connection.Close();
+                        }
 
                         if (ex is ObjectDisposedException)
                         {
@@ -417,9 +430,9 @@ namespace Cassandra.Connections.Control
             ReconnectFireAndForget();
         }
         
-        private void OnConnectionClosing(IConnection connection)
+        internal void OnConnectionClosing(IConnection connection)
         {
-            if (Interlocked.Read(ref _isShutdown) >= 1)
+            if (IsShutdown)
             {
                 return;
             }
@@ -471,7 +484,6 @@ namespace Cassandra.Connections.Control
                 // If there is another thread reconnecting, use the same task
                 return await currentTask.ConfigureAwait(false);
             }
-            Unsubscribe();
             try
             {
                 ControlConnection.Logger.Info("Trying to reconnect the ControlConnection");
@@ -540,7 +552,7 @@ namespace Cassandra.Connections.Control
                 var currentHost = await _topologyRefresher.RefreshNodeListAsync(
                     currentEndPoint, _connection, _serializer.GetCurrentSerializer()).ConfigureAwait(false);
                 
-                SetCurrentConnection(currentHost, currentEndPoint);
+                SetCurrentConnectionEndpoint(currentHost, currentEndPoint);
 
                 await _metadata.RebuildTokenMapAsync(false, _config.MetadataSyncOptions.MetadataSyncEnabled).ConfigureAwait(false);
                 _reconnectionSchedule = _reconnectionPolicy.NewSchedule();
@@ -567,11 +579,12 @@ namespace Cassandra.Connections.Control
 
         public void Shutdown()
         {
-            if (Interlocked.Increment(ref _isShutdown) != 1)
+            var oldState = Interlocked.Exchange(ref _state, ControlConnection.StateDisposed);
+            if (oldState == ControlConnection.StateDisposed)
             {
-                //Only shutdown once
                 return;
             }
+
             var c = _connection;
             if (c != null)
             {
@@ -585,19 +598,32 @@ namespace Cassandra.Connections.Control
         /// <summary>
         /// Unsubscribe from the current host 'Down' event and the connection 'Closing' event.
         /// </summary>
-        private void Unsubscribe()
+        private void Unsubscribe(Host h, IConnection c)
         {
-            var h = _host;
             if (h != null)
             {
                 h.Down -= OnHostDown;
             }
-
-            var c = _connection;
+            
             if (c != null)
             {
                 c.Closing -= OnConnectionClosing;
             }
+        }
+
+        /// <summary>
+        /// Subscribe the current host 'Down' event and the connection 'Closing' event.
+        /// </summary>
+        private void Subscribe(Host h, IConnection c)
+        {
+            if (h == null || c == null)
+            {
+                return;
+            }
+
+            h.Down += OnHostDown;
+            c.Closing += OnConnectionClosing;
+            c.OnIdleRequestException += ex => OnIdleRequestException(c, ex);
         }
 
         private void OnHostDown(Host h)
@@ -713,11 +739,49 @@ namespace Cassandra.Connections.Control
             return _config.AddressTranslator.Translate(value);
         }
 
-        private void SetCurrentConnection(Host host, IConnectionEndPoint endPoint)
+        private void SetCurrentConnectionEndpoint(Host host, IConnectionEndPoint endPoint)
         {
             _host = host;
             _currentConnectionEndPoint = endPoint;
             _metadata.SetCassandraVersion(host.CassandraVersion);
+        }
+        
+        private bool SetCurrentConnection(
+            IConnection previousConnection,
+            IConnection connection,
+            Host host, 
+            IConnectionEndPoint endPoint)
+        {
+            _host = host;
+            _currentConnectionEndPoint = endPoint;
+            _connection = connection;
+
+            if (host != null)
+            {
+                _metadata.SetCassandraVersion(host.CassandraVersion);
+            }
+
+            var oldState = Interlocked.CompareExchange(ref _state, ControlConnection.StateRunning, ControlConnection.StateRunning);
+            if (oldState == ControlConnection.StateDisposed)
+            {
+                CloseConnectionInternal(connection);
+                CloseConnectionInternal(previousConnection);
+                return false;
+            }
+
+            return true;
+        }
+
+        private void CloseConnectionInternal(IConnection connection)
+        {
+            try
+            {
+                connection?.Close();
+            }
+            catch (Exception ex)
+            {
+                ControlConnection.Logger.Error("Error closing connection after control connection was disposed: {0}", ex.ToString());
+            }
         }
 
         /// <summary>
