@@ -132,5 +132,10 @@ namespace Cassandra.Connections
         /// If the keyspace is different from the current value, it sends a Query request to change it
         /// </summary>
         Task<bool> SetKeyspace(string value);
+
+        /// <summary>
+        /// Cancels current requests and invokes Closing event handlers. Doesn't guarantee disposal, the Closing event handlers should do that.
+        /// </summary>
+        void Close();
     }
 }

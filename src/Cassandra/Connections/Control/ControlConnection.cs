@@ -391,7 +391,7 @@ namespace Cassandra.Connections.Control
 
                         await _config.ServerEventsSubscriber.SubscribeToServerEvents(connection, OnConnectionCassandraEvent).ConfigureAwait(false);
                         await _metadata.RebuildTokenMapAsync(false, _config.MetadataSyncOptions.MetadataSyncEnabled).ConfigureAwait(false);
-
+                        oldConnection?.Dispose();
                         return;
                     }
                     catch (Exception ex)
@@ -432,12 +432,12 @@ namespace Cassandra.Connections.Control
         
         internal void OnConnectionClosing(IConnection connection)
         {
+            connection.Closing -= OnConnectionClosing;
+            connection.Dispose();
             if (IsShutdown)
             {
                 return;
             }
-
-            connection.Closing -= OnConnectionClosing;
             ControlConnection.Logger.Warning(
                 "Connection {0} used by the ControlConnection is closing.", connection.EndPoint.EndpointFriendlyName);
             ReconnectFireAndForget();
@@ -450,7 +450,7 @@ namespace Cassandra.Connections.Control
         {
             if (c.IsDisposed)
             {
-                ControlConnection.Logger.Info("Idle timeout exception, connection to {0} used in control connection is closed, " +
+                ControlConnection.Logger.Info("Idle timeout exception, connection to {0} used in control connection is disposed, " +
                                               "triggering a reconnection. Exception: {1}",
                     c.EndPoint.EndpointFriendlyName, ex);
             }
@@ -459,7 +459,7 @@ namespace Cassandra.Connections.Control
                 ControlConnection.Logger.Warning("Connection to {0} used in control connection considered as unhealthy after " +
                                                  "idle timeout exception, triggering reconnection: {1}",
                     c.EndPoint.EndpointFriendlyName, ex);
-                c.Dispose();
+                c.Close();
             }
         }
         

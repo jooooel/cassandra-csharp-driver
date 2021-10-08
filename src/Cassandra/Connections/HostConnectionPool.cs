@@ -390,6 +390,7 @@ namespace Cassandra.Connections
                     // No point in doing them again
                     return;
                 }
+                c.Dispose();
                 HostConnectionPool.Logger.Info("Pool #{0} for host {1} removed a connection, new length: {2}",
                     GetHashCode(), _host.Address, currentLength);
             }
@@ -544,7 +545,7 @@ namespace Cassandra.Connections
             {
                 HostConnectionPool.Logger.Warning("Connection to {0} considered as unhealthy after idle timeout exception: {1}",
                     _host.Address, ex);
-                c.Dispose();
+                c.Close();
             }
         }
 

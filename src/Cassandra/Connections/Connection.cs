@@ -369,6 +369,12 @@ namespace Cassandra.Connections
             CloseInternal(null, null, true);
         }
 
+        /// <inheritdoc />
+        public void Close()
+        {
+            CloseInternal(null, null, false);
+        }
+
         private void InternalDispose()
         {
             if (Interlocked.Increment(ref _disposed) != 1)
