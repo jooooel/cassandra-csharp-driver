@@ -355,6 +355,7 @@ namespace Cassandra.IntegrationTests.Core
         }
 
         [Test]
+        [Repeat(10)]
         public async Task ControlConnection_Should_Reconnect_After_Failed_Attempts()
         {
             const int connectionLength = 1;

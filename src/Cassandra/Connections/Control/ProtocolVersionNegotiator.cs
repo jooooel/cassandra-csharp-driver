@@ -68,7 +68,7 @@ namespace Cassandra.Connections.Control
 
             serializer.ChangeProtocolVersion(nextVersion);
 
-            previousConnection.Close();
+            previousConnection.Dispose();
 
             var c = config.ConnectionFactory.CreateUnobserved(
                 serializer.GetCurrentSerializer(),
@@ -81,7 +81,7 @@ namespace Cassandra.Connections.Control
             }
             catch
             {
-                c.Close();
+                c.Dispose();
                 throw;
             }
         }

@@ -68,7 +68,5 @@ namespace Cassandra.Connections
         /// Sends data asynchronously
         /// </summary>
         void Write(RecyclableMemoryStream stream, Action onBufferFlush);
-
-        void Kill();
     }
 }

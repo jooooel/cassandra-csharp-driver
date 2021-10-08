@@ -149,15 +149,6 @@ namespace Cassandra.Connections
         }
         
         /// <summary>
-        /// Determines that the connection is closed and cancelled pending operations.
-        /// It could be because there was a socket error or Close() was called.
-        /// </summary>
-        public bool IsClosed
-        {
-            get { return _isClosed; }
-        }
-
-        /// <summary>
         /// Gets the current keyspace.
         /// </summary>
         public string Keyspace
@@ -309,12 +300,6 @@ namespace Cassandra.Connections
             throw new ProtocolErrorException("Expected SASL response, obtained " + response.GetType().Name);
         }
 
-        /// <inheritdoc />
-        public void Close()
-        {
-            CloseInternal(null, null, true);
-        }
-
         private void CloseInternal(Exception ex, SocketError? socketError, bool dispose)
         {
             _isClosed = true;
@@ -381,7 +366,7 @@ namespace Cassandra.Connections
 
         public virtual void Dispose()
         {
-            Close();
+            CloseInternal(null, null, true);
         }
 
         private void InternalDispose()
@@ -480,7 +465,7 @@ namespace Cassandra.Connections
             //Init TcpSocket
             _tcpSocket.Init();
             _tcpSocket.Error += OnSocketError;
-            _tcpSocket.Closing += Close;
+            _tcpSocket.Closing += Dispose;
             //Read and write event handlers are going to be invoked using IO Threads
             _tcpSocket.Read += ReadHandler;
             _tcpSocket.WriteCompleted += WriteCompletedHandler;
@@ -512,15 +497,7 @@ namespace Cassandra.Connections
             }
             throw new DriverInternalError("Expected READY or AUTHENTICATE, obtained " + response.GetType().Name);
         }
-
-        /// <summary>
-        /// Silently kill the connection, for testing purposes only
-        /// </summary>
-        internal void Kill()
-        {
-            _tcpSocket.Kill();
-        }
-
+        
         private void ReadHandler(byte[] buffer, int bytesReceived)
         {
             if (_isClosed)
@@ -867,7 +844,7 @@ namespace Cassandra.Connections
             {
                 // Probably there is an item in the write queue, we should cancel pending
                 // Avoid canceling in the user thread
-                Task.Factory.StartNew(Close, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
+                Task.Factory.StartNew(Dispose, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
                 return;
             }
             // Start a new task using the TaskScheduler for writing to avoid using the User thread

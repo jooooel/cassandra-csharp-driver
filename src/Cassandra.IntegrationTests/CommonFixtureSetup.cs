@@ -28,7 +28,7 @@ namespace Cassandra.IntegrationTests
         public void SetupTestSuite()
         {
             Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Info;
-            if (Environment.GetEnvironmentVariable("TEST_TRACE")?.ToUpper() == "ON")
+            if (Environment.GetEnvironmentVariable("TEST_TRACE")?.ToUpper() != "OFF")
             {
                 Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
             }

@@ -399,9 +399,9 @@ namespace Cassandra.Connections.Control
                         SetCurrentConnection(null, oldConnection, oldHost, oldEndpoint);
                         Unsubscribe(currentHost, connection);
                         Subscribe(oldHost, oldConnection);
-                        if (!connection.IsClosed)
+                        if (!connection.IsDisposed)
                         {
-                            connection.Close();
+                            connection.Dispose();
                         }
 
                         if (ex is ObjectDisposedException)
@@ -448,7 +448,7 @@ namespace Cassandra.Connections.Control
         /// </summary>
         private void OnIdleRequestException(IConnection c, Exception ex)
         {
-            if (c.IsClosed)
+            if (c.IsDisposed)
             {
                 ControlConnection.Logger.Info("Idle timeout exception, connection to {0} used in control connection is closed, " +
                                               "triggering a reconnection. Exception: {1}",
@@ -459,7 +459,7 @@ namespace Cassandra.Connections.Control
                 ControlConnection.Logger.Warning("Connection to {0} used in control connection considered as unhealthy after " +
                                                  "idle timeout exception, triggering reconnection: {1}",
                     c.EndPoint.EndpointFriendlyName, ex);
-                c.Close();
+                c.Dispose();
             }
         }
         
@@ -589,7 +589,7 @@ namespace Cassandra.Connections.Control
             if (c != null)
             {
                 ControlConnection.Logger.Info("Shutting down control connection to {0}", c.EndPoint.EndpointFriendlyName);
-                c.Close();
+                c.Dispose();
             }
             _reconnectionTimer.Change(Timeout.Infinite, Timeout.Infinite);
             _reconnectionTimer.Dispose();
@@ -776,7 +776,7 @@ namespace Cassandra.Connections.Control
         {
             try
             {
-                connection?.Close();
+                connection?.Dispose();
             }
             catch (Exception ex)
             {

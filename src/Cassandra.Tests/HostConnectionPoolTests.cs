@@ -122,7 +122,7 @@ namespace Cassandra.Tests
             var connectionMock = new Mock<IConnection>();
             connectionMock.Setup(c => c.InFlight).Returns(inflight);
             connectionMock.Setup(c => c.TimedOutOperations).Returns(timedOutOperations);
-            connectionMock.Setup(c => c.Close()).Raises(c => c.Closing += null, connectionMock.Object);
+            connectionMock.Setup(c => c.Dispose()).Raises(c => c.Closing += null, connectionMock.Object);
             return connectionMock.Object;
         }
 

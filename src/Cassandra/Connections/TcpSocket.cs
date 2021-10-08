@@ -462,11 +462,6 @@ namespace Cassandra.Connections
             }
         }
 
-        public void Kill()
-        {
-            _socket.Disconnect(true);
-        }
-
         public void Dispose()
         {
             if (_socket == null)
