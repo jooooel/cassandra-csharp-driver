@@ -355,7 +355,7 @@ namespace Cassandra.IntegrationTests.Core
         }
 
         [Test]
-        public async Task ControlConnection_Should_Reconnect_After_Failed_Attemps()
+        public async Task ControlConnection_Should_Reconnect_After_Failed_Attempts()
         {
             const int connectionLength = 1;
             var builder = ClusterBuilder()
@@ -414,7 +414,7 @@ namespace Cassandra.IntegrationTests.Core
                     serverConnections = await testCluster.GetConnectedPortsAsync().ConfigureAwait(false);
                     //coreConnectionLength + 1 (the control connection) 
                     Assert.AreEqual(4, serverConnections.Count, "2");
-                }, 100, 10).ConfigureAwait(false);
+                }, 100, 100).ConfigureAwait(false);
 
                 TestHelper.RetryAssert(() =>
                 {
