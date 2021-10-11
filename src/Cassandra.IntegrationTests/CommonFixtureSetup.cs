@@ -28,10 +28,10 @@ namespace Cassandra.IntegrationTests
         [OneTimeSetUp]
         public void SetupTestSuite()
         {
-            Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Error;
-            if (Environment.GetEnvironmentVariable("TEST_TRACE")?.ToUpper() != "OFF")
+            Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Info;
+            if (Environment.GetEnvironmentVariable("TEST_TRACE")?.ToUpper() == "ON")
             {
-                Trace.Listeners.Add(new TextWriterTraceListener(Console.Error));
+                Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
             }
             Trace.TraceInformation("Starting Test Run ...");
         }
