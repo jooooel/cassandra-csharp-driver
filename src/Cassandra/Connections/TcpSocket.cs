@@ -104,11 +104,14 @@ namespace Cassandra.Connections
             }
             _receiveBuffer = new byte[_socket.ReceiveBufferSize];
             
-            _receiveSocketEvent = new SocketAsyncEventArgs();
-            _receiveSocketEvent.SetBuffer(_receiveBuffer, 0, _receiveBuffer.Length);
-            _receiveSocketEvent.Completed += OnReceiveCompleted;
-            _sendSocketEvent = new SocketAsyncEventArgs();
-            _sendSocketEvent.Completed += OnSendCompleted;
+            if (SSLOptions == null && !Options.UseStreamMode)
+            {
+                _receiveSocketEvent = new SocketAsyncEventArgs();
+                _receiveSocketEvent.SetBuffer(_receiveBuffer, 0, _receiveBuffer.Length);
+                _receiveSocketEvent.Completed += OnReceiveCompleted;
+                _sendSocketEvent = new SocketAsyncEventArgs();
+                _sendSocketEvent.Completed += OnSendCompleted;
+            }
         }
         
         /// <summary>
