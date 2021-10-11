@@ -879,17 +879,17 @@ namespace Cassandra.IntegrationTests.Core
 
         private Task<Response> Query(Connection connection, string query, QueryProtocolOptions options = null)
         {
-            var request = GetQueryRequest(query, options);
+            var request = GetQueryRequest(query, options, connection.Serializer);
             return connection.Send(request);
         }
 
-        private QueryRequest GetQueryRequest(string query = BasicQuery, QueryProtocolOptions options = null)
+        private QueryRequest GetQueryRequest(string query = BasicQuery, QueryProtocolOptions options = null, ISerializer serializer = null)
         {
             if (options == null)
             {
                 options = QueryProtocolOptions.Default;
             }
-            return new QueryRequest(GetSerializer(), query, options, false, null);
+            return new QueryRequest(serializer ?? GetSerializer(), query, options, false, null);
         }
 
         private static T ValidateResult<T>(Response response)
