@@ -449,6 +449,7 @@ namespace Cassandra.Connections
         {
             try
             {
+                Connection.Logger.Verbose("Attempting to open Connection #{0} to {1}", GetHashCode(), EndPoint.EndpointFriendlyName);
                 var response = await DoOpen().ConfigureAwait(false);
                 Connection.Logger.Verbose("Opened Connection #{0} to {1}.", GetHashCode(), EndPoint.EndpointFriendlyName);
                 return response;
