@@ -36,11 +36,14 @@ namespace Cassandra.IntegrationTests.Core
             try
             {
                 var builder = ClusterBuilder().WithDefaultKeyspace("system")
-                                           .AddContactPoints("1.1.1.1") // IP address that drops (not rejects !) the inbound connection
-                                           .WithSocketOptions(new SocketOptions().SetConnectTimeoutMillis(700));
-                var cluster = builder.Build();
-                await Connect(cluster, asyncConnection, session =>{}).ConfigureAwait(false);
-                Assert.Fail();
+                                              .AddContactPoints("1.1.1.1") // IP address that drops (not rejects !) the inbound connection
+                                              .WithSocketOptions(new SocketOptions().SetConnectTimeoutMillis(700));
+                using (var cluster = builder.Build())
+                {
+
+                    await Connect(cluster, asyncConnection, session => { }).ConfigureAwait(false);
+                    Assert.Fail();
+                }
             }
             catch (NoHostAvailableException)
             {

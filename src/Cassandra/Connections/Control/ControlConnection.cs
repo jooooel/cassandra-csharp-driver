@@ -264,6 +264,14 @@ namespace Cassandra.Connections.Control
         /// <exception cref="DriverInternalError" />
         private async Task Connect(bool isInitializing)
         {
+            if (isInitializing)
+            {
+                ControlConnection.Logger.Error("Control Connection {0} connecting.", GetHashCode());
+            } 
+            else
+            {
+                ControlConnection.Logger.Error("Control Connection {0} reconnecting.", GetHashCode());
+            }
             // lazy iterator of endpoints to try for the control connection
             IEnumerable<Task<IEnumerable<IConnectionEndPoint>>> endPointResolutionTasksLazyIterator =
                 Enumerable.Empty<Task<IEnumerable<IConnectionEndPoint>>>();
@@ -433,7 +441,7 @@ namespace Cassandra.Connections.Control
                 return;
             }
             ControlConnection.Logger.Warning(
-                "Connection {0} used by the ControlConnection is closing.", connection.EndPoint.EndpointFriendlyName);
+                "Connection {0} used by the ControlConnection {1} is closing.", connection.EndPoint.EndpointFriendlyName, GetHashCode());
             ReconnectFireAndForget();
         }
         
