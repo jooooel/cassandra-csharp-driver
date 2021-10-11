@@ -318,7 +318,6 @@ namespace Cassandra.Connections.Control
             var oldConnection = _connection;
             var oldHost = _host;
             var oldEndpoint = _currentConnectionEndPoint;
-            Unsubscribe(oldHost, oldConnection);
 
             var triedHosts = new Dictionary<IPEndPoint, Exception>();
             foreach (var endPointResolutionTask in endPointResolutionTasksLazyIterator)
@@ -373,7 +372,7 @@ namespace Cassandra.Connections.Control
                                 _config, _metadata, connection, _serializer).ConfigureAwait(false);
                         }
                         
-                        if (!SetCurrentConnection(oldConnection, connection, currentHost, endPoint))
+                        if (!SetCurrentConnection(connection, currentHost, endPoint))
                         {
                             ControlConnection.Logger.Info(
                                 "Connection established to {0} successfully but the Control Connection was being disposed, " +
@@ -391,17 +390,13 @@ namespace Cassandra.Connections.Control
 
                         await _config.ServerEventsSubscriber.SubscribeToServerEvents(connection, OnConnectionCassandraEvent).ConfigureAwait(false);
                         await _metadata.RebuildTokenMapAsync(false, _config.MetadataSyncOptions.MetadataSyncEnabled).ConfigureAwait(false);
-                        oldConnection?.Dispose();
                         return;
                     }
                     catch (Exception ex)
                     {
-                        SetCurrentConnection(null, oldConnection, oldHost, oldEndpoint);
-                        Unsubscribe(currentHost, connection);
-                        if (!connection.IsDisposed)
-                        {
-                            connection.Dispose();
-                        }
+                        connection.Dispose();
+
+                        SetCurrentConnection(oldConnection, oldHost, oldEndpoint);
 
                         if (ex is ObjectDisposedException)
                         {
@@ -483,6 +478,9 @@ namespace Cassandra.Connections.Control
                 // If there is another thread reconnecting, use the same task
                 return await currentTask.ConfigureAwait(false);
             }
+            var oldConnection = _connection;
+            var oldHost = _host;
+            Unsubscribe(oldHost, oldConnection);
             try
             {
                 ControlConnection.Logger.Info("Trying to reconnect the ControlConnection");
@@ -506,6 +504,13 @@ namespace Cassandra.Connections.Control
 
                 // It will throw the same exception that it was set in the TCS
                 throw;
+            }
+            finally
+            {
+                if (_connection != oldConnection)
+                {
+                    oldConnection?.Dispose();
+                }
             }
 
             if (IsShutdown)
@@ -746,7 +751,6 @@ namespace Cassandra.Connections.Control
         }
         
         private bool SetCurrentConnection(
-            IConnection previousConnection,
             IConnection connection,
             Host host, 
             IConnectionEndPoint endPoint)
@@ -761,26 +765,7 @@ namespace Cassandra.Connections.Control
             }
 
             var oldState = Interlocked.CompareExchange(ref _state, ControlConnection.StateRunning, ControlConnection.StateRunning);
-            if (oldState == ControlConnection.StateDisposed)
-            {
-                CloseConnectionInternal(connection);
-                CloseConnectionInternal(previousConnection);
-                return false;
-            }
-
-            return true;
-        }
-
-        private void CloseConnectionInternal(IConnection connection)
-        {
-            try
-            {
-                connection?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                ControlConnection.Logger.Error("Error closing connection after control connection was disposed: {0}", ex.ToString());
-            }
+            return oldState != ControlConnection.StateDisposed;
         }
 
         /// <summary>
