@@ -294,7 +294,14 @@ namespace Cassandra.Connections
             }
 
             //Emit event
-            Read?.Invoke(e.Buffer, e.BytesTransferred);
+            try
+            {
+                Read?.Invoke(e.Buffer, e.BytesTransferred);
+            }
+            catch (Exception ex)
+            {
+                OnError(ex);
+            }
 
             ReceiveAsync();
         }
