@@ -266,11 +266,11 @@ namespace Cassandra.Connections.Control
         {
             if (isInitializing)
             {
-                ControlConnection.Logger.Error("Control Connection {0} connecting.", GetHashCode());
+                ControlConnection.Logger.Verbose("Control Connection {0} connecting.", GetHashCode());
             } 
             else
             {
-                ControlConnection.Logger.Error("Control Connection {0} reconnecting.", GetHashCode());
+                ControlConnection.Logger.Verbose("Control Connection {0} reconnecting.", GetHashCode());
             }
             // lazy iterator of endpoints to try for the control connection
             IEnumerable<Task<IEnumerable<IConnectionEndPoint>>> endPointResolutionTasksLazyIterator =
@@ -440,7 +440,7 @@ namespace Cassandra.Connections.Control
             {
                 return;
             }
-            ControlConnection.Logger.Error(
+            ControlConnection.Logger.Warning(
                 "Connection {0} used by the ControlConnection {1} is closing.", connection.EndPoint.EndpointFriendlyName, GetHashCode());
             ReconnectFireAndForget();
         }

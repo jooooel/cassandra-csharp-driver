@@ -388,7 +388,7 @@ namespace Cassandra.Connections
                 return;
             }
 
-            Connection.Logger.Error("Disposing Connection #{0} to {1}.", GetHashCode(), EndPoint.EndpointFriendlyName);
+            Connection.Logger.Verbose("Disposing Connection #{0} to {1}.", GetHashCode(), EndPoint.EndpointFriendlyName);
 
             _idleTimer.Dispose();
             _tcpSocket.Dispose();
@@ -454,9 +454,9 @@ namespace Cassandra.Connections
         {
             try
             {
-                Connection.Logger.Error("Attempting to open Connection #{0} to {1}", GetHashCode(), EndPoint.EndpointFriendlyName);
+                Connection.Logger.Verbose("Attempting to open Connection #{0} to {1}", GetHashCode(), EndPoint.EndpointFriendlyName);
                 var response = await DoOpen().ConfigureAwait(false);
-                Connection.Logger.Error("Opened Connection #{0} to {1} with local endpoint {2}.", GetHashCode(), EndPoint.EndpointFriendlyName, _tcpSocket.GetLocalIpEndPoint()?.ToString());
+                Connection.Logger.Verbose("Opened Connection #{0} to {1} with local endpoint {2}.", GetHashCode(), EndPoint.EndpointFriendlyName, _tcpSocket.GetLocalIpEndPoint()?.ToString());
                 return response;
             }
             catch (Exception exception)
