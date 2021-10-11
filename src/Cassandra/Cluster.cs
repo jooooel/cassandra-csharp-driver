@@ -288,7 +288,7 @@ namespace Cassandra
                 _initLock.Release();
             }
 
-            Cluster.Logger.Info("Cluster [" + Metadata.ClusterName + "] has been initialized.");
+            Cluster.Logger.Info("Cluster #{0} [{1}] has been initialized.", GetHashCode(), Metadata.ClusterName);
             return;
         }
 
@@ -490,7 +490,7 @@ namespace Cassandra
                 _controlConnection.Dispose();
                 await _protocolEventDebouncer.ShutdownAsync().ConfigureAwait(false);
                 Configuration.Timer.Dispose();
-                Cluster.Logger.Info("Cluster [" + Metadata.ClusterName + "] has been shut down.");
+                Cluster.Logger.Info("Cluster #{0} has been shut down.", GetHashCode());
                 return;
             }
 
@@ -530,7 +530,7 @@ namespace Cassandra
                 sep.Dispose();
             }
 
-            Cluster.Logger.Info("Cluster [" + Metadata.ClusterName + "] has been shut down.");
+            Cluster.Logger.Info("Cluster #{0} [{1}] has been shut down.", GetHashCode(), Metadata.ClusterName);
             return;
         }
 
