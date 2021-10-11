@@ -308,12 +308,17 @@ namespace Cassandra.Connections
             {
                 Closing?.Invoke(this);
 
-                Connection.Logger.Info("Cancelling in Connection {0}, {1} pending operations and write queue {2}", EndPoint.EndpointFriendlyName,
+                Connection.Logger.Info("Cancelling in Connection {0} to {1}, {2} pending operations and write queue {3}", GetHashCode(), EndPoint.EndpointFriendlyName,
                     InFlight, _writeQueue.Count);
 
                 if (socketError != null)
                 {
                     Connection.Logger.Verbose("The socket status received was {0}", socketError.Value);
+                }
+
+                if (ex != null)
+                {
+                    Connection.Logger.Verbose("The exception received was {0}", ex.ToString());
                 }
             }
 
@@ -421,7 +426,7 @@ namespace Cassandra.Connections
                 }
                 return;
             }
-            Connection.Logger.Verbose("Connection idling, issuing a Request to prevent idle disconnects");
+            Connection.Logger.Verbose("Connection {0} to {1} idling, issuing a Request to prevent idle disconnects", GetHashCode(), EndPoint.EndpointFriendlyName);
             var request = new OptionsRequest();
             Send(request, (error, response) =>
             {
