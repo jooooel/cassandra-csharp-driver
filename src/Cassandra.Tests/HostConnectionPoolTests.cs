@@ -45,13 +45,7 @@ namespace Cassandra.Tests
         private static readonly Host Host1 = TestHelper.CreateHost("127.0.0.1");
         private static readonly HashedWheelTimer Timer = new HashedWheelTimer();
         private Mock<HostConnectionPool> _mock;
-
-        [OneTimeSetUp]
-        public void OnTimeSetUp()
-        {
-            Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Info;
-        }
-
+        
         [TearDown]
         public void TearDown()
         {
@@ -124,11 +118,6 @@ namespace Cassandra.Tests
             connectionMock.Setup(c => c.TimedOutOperations).Returns(timedOutOperations);
             connectionMock.Setup(c => c.Dispose()).Raises(c => c.Closing += null, connectionMock.Object);
             return connectionMock.Object;
-        }
-
-        public HostConnectionPoolTests()
-        {
-            Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Info;
         }
 
         [Test]

@@ -28,7 +28,7 @@ namespace Cassandra.IntegrationTests
         [OneTimeSetUp]
         public void SetupTestSuite()
         {
-            Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Verbose;
+            Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Warning;
             if (Environment.GetEnvironmentVariable("TEST_TRACE")?.ToUpper() != "OFF")
             {
                 Trace.Listeners.Add(new TextWriterTraceListener(Console.Error));

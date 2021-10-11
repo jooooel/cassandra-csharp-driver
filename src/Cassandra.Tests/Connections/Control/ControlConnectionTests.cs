@@ -41,11 +41,6 @@ namespace Cassandra.Tests.Connections.Control
         private TestContactPoint _cp2;
         private TestContactPoint _localhost;
 
-        public ControlConnectionTests()
-        {
-            Diagnostics.CassandraTraceSwitch.Level = System.Diagnostics.TraceLevel.Info;
-        }
-        
         private IProtocolEventDebouncer GetEventDebouncer(Configuration config)
         {
             return new ProtocolEventDebouncer(

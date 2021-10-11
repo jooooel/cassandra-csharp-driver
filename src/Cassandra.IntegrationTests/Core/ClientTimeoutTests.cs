@@ -34,12 +34,6 @@ namespace Cassandra.IntegrationTests.Core
     {
         private SimulacronCluster _testCluster;
 
-        public ClientTimeoutTests()
-        {
-            Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Info;
-            Diagnostics.CassandraStackTraceIncluded = true;
-        }
-
         [TearDown]
         public void TearDown()
         {

@@ -54,13 +54,7 @@ namespace Cassandra.IntegrationTests.Core
             // we just need to make sure that there is a query-able cluster
             _testCluster = TestClusterManager.GetTestCluster(1, DefaultMaxClusterCreateRetries, true, false);
         }
-
-        public ConnectionTests()
-        {
-            Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Info;
-            Diagnostics.CassandraStackTraceIncluded = true;
-        }
-
+        
         [Test]
         public void Basic_Startup_Test()
         {
