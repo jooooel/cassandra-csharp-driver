@@ -308,7 +308,7 @@ namespace Cassandra.Connections
             {
                 Closing?.Invoke(this);
 
-                Connection.Logger.Info("Cancelling in Connection {0} to {1}, {2} pending operations and write queue {3}", GetHashCode(), EndPoint.EndpointFriendlyName,
+                Connection.Logger.Info("Cancelling in Connection #{0} to {1}, {2} pending operations and write queue {3}", GetHashCode(), EndPoint.EndpointFriendlyName,
                     InFlight, _writeQueue.Count);
 
                 if (socketError != null)
@@ -426,7 +426,7 @@ namespace Cassandra.Connections
                 }
                 return;
             }
-            Connection.Logger.Verbose("Connection {0} to {1} idling, issuing a Request to prevent idle disconnects", GetHashCode(), EndPoint.EndpointFriendlyName);
+            Connection.Logger.Verbose("Connection #{0} to {1} idling, issuing a Request to prevent idle disconnects", GetHashCode(), EndPoint.EndpointFriendlyName);
             var request = new OptionsRequest();
             Send(request, (error, response) =>
             {
@@ -475,7 +475,6 @@ namespace Cassandra.Connections
         public async Task<Response> DoOpen()
         {
             //Init TcpSocket
-            _tcpSocket.Init();
             _tcpSocket.Error += OnSocketError;
             _tcpSocket.Closing += Dispose;
             //Read and write event handlers are going to be invoked using IO Threads
