@@ -486,8 +486,14 @@ namespace Cassandra
         {
             if (!_initialized)
             {
+                _metadata.ShutDown(timeoutMs);
+                _controlConnection.Dispose();
+                await _protocolEventDebouncer.ShutdownAsync().ConfigureAwait(false);
+                Configuration.Timer.Dispose();
+                Cluster.Logger.Info("Cluster [" + Metadata.ClusterName + "] has been shut down.");
                 return;
             }
+
             var sessions = _connectedSessions.ClearAndGet();
             try
             {

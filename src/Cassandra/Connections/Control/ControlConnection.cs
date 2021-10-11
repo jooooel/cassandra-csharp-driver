@@ -440,7 +440,7 @@ namespace Cassandra.Connections.Control
             {
                 return;
             }
-            ControlConnection.Logger.Warning(
+            ControlConnection.Logger.Error(
                 "Connection {0} used by the ControlConnection {1} is closing.", connection.EndPoint.EndpointFriendlyName, GetHashCode());
             ReconnectFireAndForget();
         }
