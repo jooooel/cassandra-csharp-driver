@@ -16,6 +16,7 @@
 
 using System;
 using System.Diagnostics;
+using System.IO;
 using Cassandra.IntegrationTests.TestClusterManagement;
 using NUnit.Framework;
 
@@ -27,10 +28,10 @@ namespace Cassandra.IntegrationTests
         [OneTimeSetUp]
         public void SetupTestSuite()
         {
-            Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Info;
+            Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Verbose;
             if (Environment.GetEnvironmentVariable("TEST_TRACE")?.ToUpper() != "OFF")
             {
-                Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
+                Trace.Listeners.Add(new TextWriterTraceListener(Console.Error));
             }
             Trace.TraceInformation("Starting Test Run ...");
         }
@@ -42,6 +43,7 @@ namespace Cassandra.IntegrationTests
             TestClusterManager.TryRemove();
             SimulacronManager.DefaultInstance.Stop();
             TestCloudClusterManager.TryRemove();
+            Trace.Flush();
         }
     }
 }

@@ -419,7 +419,7 @@ namespace Cassandra.IntegrationTests.Core
                     {
                         serverConnections = await testCluster.GetConnectedPortsAsync().ConfigureAwait(false);
                         //coreConnectionLength + 1 (the control connection) 
-                        Assert.AreEqual(4, serverConnections.Count, "2");
+                        Assert.AreEqual(4, serverConnections.Count, string.Join(",", serverConnections.Select(ip => (ip?.ToString()) ?? "null")));
                     }, 100, 100).ConfigureAwait(false);
 
                     TestHelper.RetryAssert(() =>

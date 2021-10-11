@@ -456,7 +456,7 @@ namespace Cassandra.Connections
             {
                 Connection.Logger.Verbose("Attempting to open Connection #{0} to {1}", GetHashCode(), EndPoint.EndpointFriendlyName);
                 var response = await DoOpen().ConfigureAwait(false);
-                Connection.Logger.Verbose("Opened Connection #{0} to {1}.", GetHashCode(), EndPoint.EndpointFriendlyName);
+                Connection.Logger.Verbose("Opened Connection #{0} to {1} with local endpoint {2}.", GetHashCode(), EndPoint.EndpointFriendlyName, _tcpSocket.GetLocalIpEndPoint()?.ToString());
                 return response;
             }
             catch (Exception exception)
