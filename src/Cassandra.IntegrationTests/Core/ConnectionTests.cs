@@ -789,7 +789,7 @@ namespace Cassandra.IntegrationTests.Core
         {
             const int defaultHeartbeatInterval = 30000;
             using (var testCluster = SimulacronCluster.CreateNew(new SimulacronOptions { Nodes = "1" }))
-            using (var connection = CreateConnection(null, null, new PoolingOptions(), testCluster.InitialContactPoint.Address.ToString()))
+            using (var connection = CreateConnection(null, null, new PoolingOptions(), ProtocolVersion.V4, testCluster.InitialContactPoint.Address.ToString()))
             {
                 await connection.Open().ConfigureAwait(false);
                 Assert.AreEqual(defaultHeartbeatInterval, connection.Configuration.PoolingOptions.GetHeartBeatInterval());
@@ -840,7 +840,12 @@ namespace Cassandra.IntegrationTests.Core
             }
         }
 
-        private Connection CreateConnection(ProtocolOptions protocolOptions = null, SocketOptions socketOptions = null, PoolingOptions poolingOptions = null, string contactPoint = null)
+        private Connection CreateConnection(
+            ProtocolOptions protocolOptions = null, 
+            SocketOptions socketOptions = null, 
+            PoolingOptions poolingOptions = null, 
+            ProtocolVersion? version = null, 
+            string contactPoint = null)
         {
             if (socketOptions == null)
             {
@@ -858,7 +863,7 @@ namespace Cassandra.IntegrationTests.Core
                 SocketOptions = socketOptions,
                 ClientOptions = new ClientOptions(false, 20000, null)
             }.Build();
-            return CreateConnection(GetProtocolVersion(), config, contactPoint);
+            return CreateConnection(version ?? GetProtocolVersion(), config, contactPoint);
         }
 
         private Connection CreateConnection(ProtocolVersion protocolVersion, Configuration config, string contactPoint = null)

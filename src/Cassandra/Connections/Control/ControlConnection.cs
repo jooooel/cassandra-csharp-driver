@@ -398,7 +398,6 @@ namespace Cassandra.Connections.Control
                     {
                         SetCurrentConnection(null, oldConnection, oldHost, oldEndpoint);
                         Unsubscribe(currentHost, connection);
-                        Subscribe(oldHost, oldConnection);
                         if (!connection.IsDisposed)
                         {
                             connection.Dispose();

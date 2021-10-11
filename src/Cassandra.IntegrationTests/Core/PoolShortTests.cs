@@ -418,8 +418,8 @@ namespace Cassandra.IntegrationTests.Core
                     await TestHelper.RetryAssertAsync(async () =>
                     {
                         serverConnections = await testCluster.GetConnectedPortsAsync().ConfigureAwait(false);
-                    //coreConnectionLength + 1 (the control connection) 
-                    Assert.AreEqual(4, serverConnections.Count, "2");
+                        //coreConnectionLength + 1 (the control connection) 
+                        Assert.AreEqual(4, serverConnections.Count, "2");
                     }, 100, 100).ConfigureAwait(false);
 
                     TestHelper.RetryAssert(() =>
