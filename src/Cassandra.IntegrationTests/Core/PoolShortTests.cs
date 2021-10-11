@@ -384,8 +384,8 @@ namespace Cassandra.IntegrationTests.Core
                     await TestHelper.RetryAssertAsync(async () =>
                     {
                         serverConnections = await testCluster.GetConnectedPortsAsync().ConfigureAwait(false);
-                    //coreConnectionLength + 1 (the control connection) 
-                    Assert.AreEqual(4, serverConnections.Count);
+                        //coreConnectionLength + 1 (the control connection) 
+                        Assert.AreEqual(4, serverConnections.Count, string.Join(",", serverConnections.Select(ip => (ip?.ToString()) ?? "null")));
                     }, 100, 10).ConfigureAwait(false);
 
                     // Disable all connections
