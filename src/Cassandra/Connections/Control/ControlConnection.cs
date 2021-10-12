@@ -763,13 +763,20 @@ namespace Cassandra.Connections.Control
             Host host, 
             IConnectionEndPoint endPoint)
         {
-            _host = host;
-            _currentConnectionEndPoint = endPoint;
-            _connection = connection;
-
             if (host != null)
             {
+                _host = host;
                 _metadata.SetCassandraVersion(host.CassandraVersion);
+            }
+
+            if (endPoint != null)
+            {
+                _currentConnectionEndPoint = endPoint;
+            }
+
+            if (connection != null)
+            {
+                _connection = connection;
             }
 
             var oldState = Interlocked.CompareExchange(ref _state, ControlConnection.StateRunning, ControlConnection.StateRunning);
