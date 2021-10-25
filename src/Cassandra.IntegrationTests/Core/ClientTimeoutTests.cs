@@ -523,8 +523,8 @@ namespace Cassandra.IntegrationTests.Core
                     var connectedPorts = await _testCluster.GetConnectedPortsAsync().ConfigureAwait(false);
                     Assert.AreEqual(20, connectedPorts.Count); // control connections
 
-                    Assert.Less(GC.GetTotalMemory(true) / initialMemory, 1.5M,
-                        "Should not exceed a 50% (1.5) more than was previously allocated");
+                    Assert.Less(GC.GetTotalMemory(true) / initialMemory, 1.75M,
+                        "Should not exceed 75% (1.75) more than was previously allocated");
                 }
                 finally
                 {
