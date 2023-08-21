@@ -19,12 +19,13 @@ using System.Diagnostics;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-
 using App.Metrics;
 using App.Metrics.Scheduling;
-
 using Cassandra;
 using Cassandra.Metrics;
+using OpenTelemetry;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace AppMetricsGraphite
 {
@@ -48,12 +49,14 @@ namespace AppMetricsGraphite
     /// </summary>
     internal class Program
     {
+        private static readonly ActivitySource MyActivitySource = new ActivitySource("Joel.Test.Cassandra");
+
         private const int GraphiteUpdateIntervalMilliseconds = 5000;
         private const string ContactPoint = "127.0.0.1";
         private const string SessionName = "metrics-example";
         private const string GraphiteIp = "127.0.0.1";
         private const int GraphitePort = 2003;
-        
+
         private static readonly IPEndPoint GraphiteEndpoint = new IPEndPoint(IPAddress.Parse(Program.GraphiteIp), Program.GraphitePort);
 
         private static void Main(string[] args)
@@ -80,7 +83,7 @@ namespace AppMetricsGraphite
 
 
             //// DataStax C# Driver configuration
-            
+
             Cassandra.Diagnostics.CassandraTraceSwitch.Level = TraceLevel.Warning;
             Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
@@ -88,7 +91,7 @@ namespace AppMetricsGraphite
                 .AddContactPoint(Program.ContactPoint)
                 .WithSessionName(Program.SessionName)
                 .WithMetrics(
-                    metrics.CreateDriverMetricsProvider(), 
+                    metrics.CreateDriverMetricsProvider(),
                     new DriverMetricsOptions()
                         .SetEnabledNodeMetrics(NodeMetric.AllNodeMetrics)
                         .SetEnabledSessionMetrics(SessionMetric.AllSessionMetrics))
@@ -97,8 +100,15 @@ namespace AppMetricsGraphite
             var session = await cluster.ConnectAsync().ConfigureAwait(false);
 
 
+            using var tracerProvider = Sdk.CreateTracerProviderBuilder()
+                .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("MyTestApplication"))
+                .AddSource("Joel.Test.Cassandra")
+                .AddSource("Cassandra")
+                .AddConsoleExporter()
+                .AddJaegerExporter()
+                .Build();
             //// Run some queries to have metrics data
-            
+
             var cts = new CancellationTokenSource();
             var task = Task.Run(async () =>
             {
@@ -106,14 +116,25 @@ namespace AppMetricsGraphite
                 {
                     try
                     {
-                        await session.ExecuteAsync(new SimpleStatement("SELECT * FROM system.local"));
+
+                        using var activity = MyActivitySource.StartActivity("SayHello");
+
+                        activity?.SetTag("foo", 1);
+                        activity?.SetTag("bar", "Hello, World!");
+                        activity?.SetTag("baz", new int[] {1, 2, 3});
+                        activity?.SetStatus(ActivityStatusCode.Ok);
+
+                        var result = await session.ExecuteAsync(new SimpleStatement("SELECT * FROM system.local"));
+
+                        activity?.Stop();
+                        await Task.Delay(1000, cts.Token);
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine($"ERROR: {ex}");
                     }
                 }
-            });
+            }, cts.Token);
 
             Console.WriteLine("Press enter to shutdown the session and exit.");
             Console.ReadLine();

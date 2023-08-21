@@ -40,14 +40,6 @@ namespace Cassandra.IntegrationTests.TestBase
             return "";
         }
 
-        public float NextSingle()
-        {
-            double numb = NextDouble();
-            numb -= 0.5;
-            numb *= 2;
-            return float.MaxValue*(float) numb;
-        }
-
         public UInt16 NextUInt16()
         {
             return (ushort) Next(0, 65535);
@@ -56,13 +48,6 @@ namespace Cassandra.IntegrationTests.TestBase
         public static int NextInt32()
         {
             return Randomm.Instance.Next();
-        }
-
-        public Int64 NextInt64()
-        {
-            var buffer = new byte[sizeof (Int64)];
-            NextBytes(buffer);
-            return BitConverter.ToInt64(buffer, 0);
         }
 
         public decimal NextDecimal()

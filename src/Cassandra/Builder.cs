@@ -953,7 +953,7 @@ namespace Cassandra
             _metricsOptions = null;
             return this;
         }
-        
+
         /// <summary>
         /// <para>
         /// Enables metrics. DataStax provides an implementation based on a third party library (App.Metrics)

@@ -21,10 +21,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Cassandra.Collections;
 using Cassandra.Connections;
 using Cassandra.ExecutionProfiles;
+using Cassandra.Observers;
 using Cassandra.Observers.Abstractions;
 using Cassandra.Serialization;
 using Cassandra.SessionManagement;
@@ -49,6 +49,9 @@ namespace Cassandra.Requests
         private ISpeculativeExecutionPlan _executionPlan;
         private volatile HashedWheelTimer.ITimeout _nextExecutionTimeout;
         private readonly IRequestObserver _requestObserver;
+
+        // private readonly TjenareHej _tjenareHej;
+
         public IExtendedRetryPolicy RetryPolicy { get; }
         public ISerializer Serializer { get; }
         public IStatement Statement { get; }
@@ -61,8 +64,13 @@ namespace Cassandra.Requests
             IInternalSession session, ISerializer serializer, IRequest request, IStatement statement, IRequestOptions requestOptions)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
-            _requestObserver = session.ObserverFactory.CreateRequestObserver();
-            _requestResultHandler = new TcsMetricsRequestResultHandler(_requestObserver);
+            _requestObserver = new AggreateRequestObserver(new List<IRequestObserver>
+            {
+                new TelemetryRequestObserver(request),
+                session.ObserverFactory.CreateRequestObserver()
+            });
+
+            _requestResultHandler = new RequestResultHandler(_requestObserver);
             _request = request;
             Serializer = serializer ?? throw new ArgumentNullException(nameof(session));
             Statement = statement;
@@ -138,18 +146,18 @@ namespace Cassandra.Requests
             if (statement is BoundStatement s2)
             {
                 // set skip metadata only when result metadata id is supported because of CASSANDRA-10786
-                var skipMetadata = 
-                    serializer.ProtocolVersion.SupportsResultMetadataId() 
+                var skipMetadata =
+                    serializer.ProtocolVersion.SupportsResultMetadataId()
                     && s2.PreparedStatement.ResultMetadata.ContainsColumnDefinitions();
 
                 var options = QueryProtocolOptions.CreateFromQuery(serializer.ProtocolVersion, s2, requestOptions, skipMetadata);
                 request = new ExecuteRequest(
-                    serializer, 
-                    s2.PreparedStatement.Id, 
+                    serializer,
+                    s2.PreparedStatement.Id,
                     null,
-                    s2.PreparedStatement.ResultMetadata, 
+                    s2.PreparedStatement.ResultMetadata,
                     options,
-                    s2.IsTracing, 
+                    s2.IsTracing,
                     s2.OutgoingPayload);
             }
 
@@ -161,6 +169,7 @@ namespace Cassandra.Requests
                 {
                     consistency = s.ConsistencyLevel.Value;
                 }
+
                 request = new BatchRequest(serializer, s.OutgoingPayload, s, consistency, requestOptions);
             }
 
@@ -168,6 +177,7 @@ namespace Cassandra.Requests
             {
                 throw new NotSupportedException("Statement of type " + statement.GetType().FullName + " not supported");
             }
+
             return request;
         }
 
@@ -195,6 +205,7 @@ namespace Cassandra.Requests
             {
                 return false;
             }
+
             //Cancel the current timer
             //When the next execution timer is being scheduled at the *same time*
             //the timer is not going to be cancelled, in that case, this instance is going to stay alive a little longer
@@ -203,11 +214,13 @@ namespace Cassandra.Requests
             {
                 execution.Cancel();
             }
+
             if (ex != null)
             {
                 _requestResultHandler.TrySetException(ex);
                 return true;
             }
+
             if (action != null)
             {
                 //Create a new Task using the default scheduler, invoke the action and set the result
@@ -225,7 +238,9 @@ namespace Cassandra.Requests
                 });
                 return true;
             }
+
             _requestResultHandler.TrySetResult(result);
+            // _tjenareHej.OnRequestEnd();
             return true;
         }
 
@@ -239,6 +254,7 @@ namespace Cassandra.Requests
                 RequestHandler.Logger.Info("Could not obtain an available host for speculative execution");
                 return;
             }
+
             SetCompleted(ex);
         }
 
@@ -257,6 +273,7 @@ namespace Cassandra.Requests
                     return _queryPlan.Current;
                 }
             }
+
             return null;
         }
 
@@ -305,6 +322,7 @@ namespace Cassandra.Requests
                 {
                     continue;
                 }
+
                 return c;
             }
 
@@ -354,7 +372,7 @@ namespace Cassandra.Requests
             Host host, HostDistance distance, IInternalSession session, IDictionary<IPEndPoint, Exception> triedHosts, bool retry)
         {
             var hostPool = session.GetOrCreateConnectionPool(host, distance);
-            
+
             try
             {
                 return await hostPool.GetConnectionFromHostAsync(triedHosts, () => session.Keyspace).ConfigureAwait(false);
@@ -423,15 +441,18 @@ namespace Cassandra.Requests
                 //its not idempotent, we should not schedule an speculative execution
                 return;
             }
+
             if (_executionPlan == null)
             {
                 _executionPlan = RequestOptions.SpeculativeExecutionPolicy.NewPlan(_session.Keyspace, Statement);
             }
+
             var delay = _executionPlan.NextExecution(currentHost);
             if (delay <= 0)
             {
                 return;
             }
+
             //There is one live timer at a time.
             _nextExecutionTimeout = _session.Cluster.Configuration.Timer.NewTimeout(_ =>
             {

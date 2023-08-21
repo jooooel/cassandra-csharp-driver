@@ -20,12 +20,12 @@ using Cassandra.Observers.Abstractions;
 
 namespace Cassandra.Requests
 {
-    internal class TcsMetricsRequestResultHandler : IRequestResultHandler
+    internal class RequestResultHandler : IRequestResultHandler
     {
         private readonly IRequestObserver _requestObserver;
         private readonly TaskCompletionSource<RowSet> _taskCompletionSource;
 
-        public TcsMetricsRequestResultHandler(IRequestObserver requestObserver)
+        public RequestResultHandler(IRequestObserver requestObserver)
         {
             _requestObserver = requestObserver;
             _taskCompletionSource = new TaskCompletionSource<RowSet>();

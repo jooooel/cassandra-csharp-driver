@@ -180,6 +180,8 @@ namespace Cassandra
 
         internal bool MetricsEnabled { get; }
 
+        internal bool TelemetryEnabled { get; }
+
         internal IObserverFactoryBuilder ObserverFactoryBuilder { get; }
         
         internal static string DefaultApplicationVersion => string.Empty;
@@ -389,6 +391,7 @@ namespace Cassandra
             KeepContactPointsUnresolved = keepContactPointsUnresolved ?? false;
             AllowBetaProtocolVersions = allowBetaProtocolVersions ?? false;
             
+            // ObserverFactoryBuilder = observerFactoryBuilder ?? (MetricsEnabled ? (IObserverFactoryBuilder)new MetricsObserverFactoryBuilder() : new NullObserverFactoryBuilder());
             ObserverFactoryBuilder = observerFactoryBuilder ?? (MetricsEnabled ? (IObserverFactoryBuilder)new MetricsObserverFactoryBuilder() : new NullObserverFactoryBuilder());
             RequestHandlerFactory = requestHandlerFactory ?? new RequestHandlerFactory();
             HostConnectionPoolFactory = hostConnectionPoolFactory ?? new HostConnectionPoolFactory();
